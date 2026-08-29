@@ -61,6 +61,10 @@ def main() -> int:
     require("src/onsyuri/ONScripter_event.cpp", (
         "while ( host_paused ) SDL_Delay(10);", "mouseOverCheck(x, y);",
     ))
+    require("src/onsyuri/ONScripter_sound.cpp", (
+        "#if !defined(WEB)\n    unsigned long length = script_h.cBR->getFileLength( filename );",
+        "playVideoWeb(absolute_filename, click_flag, loop_flag);",
+    ))
     return 0
 
 

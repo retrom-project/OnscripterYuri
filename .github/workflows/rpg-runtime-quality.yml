@@ -31,3 +31,14 @@ jobs:
             --repository "https://github.com/$GITHUB_REPOSITORY" \
             --tag rpg-runtime-0.7.7beta-r1-rc.1 \
             --commit "$GITHUB_SHA"
+      - name: Upload branch integration candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: rpg-runtime-ons-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/rpg-runtime-output/onsyuri.js
+            ${{ runner.temp }}/rpg-runtime-output/onsyuri.wasm
+            ${{ runner.temp }}/rpg-runtime-output/COPYING
+            ${{ runner.temp }}/rpg-runtime-output/rpg-runtime-release.json
+          if-no-files-found: error
+          retention-days: 7

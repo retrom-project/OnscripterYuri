@@ -260,11 +260,13 @@ int ONScripter::playMPEG(const char *filename, bool click_flag, bool loop_flag)
         return 0;
     }
     
+#if !defined(WEB)
     unsigned long length = script_h.cBR->getFileLength( filename );
     if (length == 0){
         utils::printError(" *** can't find file [%s] ***\n", filename );
         return 0;
     }
+#endif
 
     int ret = 0;
 #if defined(USE_SMPEG)
