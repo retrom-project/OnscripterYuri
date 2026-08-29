@@ -380,6 +380,9 @@ ONScripter::ONScripter()
     current_button_state.down_flag = false;
     vsync = true;
     video = true;
+    host_paused = false;
+    host_restore_slot = -1;
+    host_restore_status = 0;
 
     int i;
     for (i=0 ; i<MAX_SPRITE2_NUM ; i++)

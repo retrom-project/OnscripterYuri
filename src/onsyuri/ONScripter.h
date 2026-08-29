@@ -121,6 +121,21 @@ public:
     
     int  openScript();
     int  init();
+    int  saveGameForHost(int no);
+    int  loadGameForHost(int no);
+    void setHostPaused(bool paused) { host_paused = paused; }
+    void setHostRestoreSlot(int slot) {
+        host_restore_slot = slot;
+        host_restore_status = slot >= 0 ? 1 : 0;
+    }
+    void applyHostRestore() {
+        if (host_restore_slot < 0) return;
+        int slot = host_restore_slot;
+        host_restore_slot = -1;
+        host_restore_status = loadGameForHost(slot) == 0 ? 0 : -1;
+    }
+    bool isHostReady() const { return current_mode == NORMAL_MODE && host_restore_status != 1; }
+    bool didHostRestoreFail() const { return host_restore_status < 0; }
 
     // ----------------------------------------
     // Commands
@@ -366,6 +381,9 @@ private:
     char *key_exe_file;
     bool vsync;
     bool video;
+    bool host_paused;
+    int host_restore_slot;
+    int host_restore_status;
     bool cacheFont;
     bool screen_dirty_flag;
 

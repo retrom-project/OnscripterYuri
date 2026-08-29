@@ -348,6 +348,36 @@ extern "C" void playVideoWeb(const char *path, bool click_flag, bool loop_flag)
         SDL_Delay(5);
     }
 }
+
+extern "C" EMSCRIPTEN_KEEPALIVE int onsyuri_host_save(int no)
+{
+    return ons.saveGameForHost(no);
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE int onsyuri_host_load(int no)
+{
+    return ons.loadGameForHost(no);
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE void onsyuri_host_set_paused(int paused)
+{
+    ons.setHostPaused(paused != 0);
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE int onsyuri_host_is_ready()
+{
+    return ons.isHostReady() ? 1 : 0;
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE int onsyuri_host_did_restore_fail()
+{
+    return ons.didHostRestoreFail() ? 1 : 0;
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE void onsyuri_host_set_restore_slot(int slot)
+{
+    ons.setHostRestoreSlot(slot);
+}
 #endif
 
 void parseOption(int argc, char *argv[]) {
@@ -574,6 +604,7 @@ int main(int argc, char *argv[])
     if (ons.init()) exit(-1);
 #if defined(WEB)
     EM_ASM(
+        if (typeof globalThis.onsyuriHostReady === "function") globalThis.onsyuriHostReady();
         self.postMessage("onsinit");
     );
 #endif

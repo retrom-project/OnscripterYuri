@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "forkRepository": "https://github.com/xxxsen/OnscripterYuri",
+  "defaultBranch": "retrom/0.7.7beta",
+  "upstreamMirrorBranch": "master",
+  "upstreams": [
+    {
+      "role": "engine",
+      "repository": "https://github.com/YuriSizuku/OnscripterYuri",
+      "refType": "TAG",
+      "ref": "v0.7.7beta",
+      "commit": "08f744b31cc1907b66a15f0402e62321a131ed81"
+    }
+  ],
+  "releaseTagPattern": "^rpg-runtime-0\\.7\\.7beta-r[1-9][0-9]*(-rc\\.[1-9][0-9]*)?$",
+  "adapterAbi": "ons-save",
+  "releaseAssets": [
+    "onsyuri.js",
+    "onsyuri.wasm",
+    "COPYING",
+    "rpg-runtime-release.json"
+  ]
+}

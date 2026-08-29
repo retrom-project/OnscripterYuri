@@ -685,11 +685,14 @@ void ONScripter::shiftCursorOnButton( int diff )
         if      (y < 0)              y = 0;
         else if (y >= screen_height) y = screen_height-1;
 
+        shift_over_button = button->no;
+#if defined(WEB)
+        mouseOverCheck(x, y);
+#else
         x = x * screen_device_width / screen_width + render_view_rect.x;
         y = y * screen_device_height / screen_height + render_view_rect.y;
-
-        shift_over_button = button->no;
         warpMouse(x, y);
+#endif
     }
 }
 
@@ -1157,6 +1160,9 @@ void ONScripter::runEventLoop()
     SDL_Event event, tmp_event;
 
     while ( SDL_WaitEvent(&event) ) {
+#if defined(WEB)
+        while ( host_paused ) SDL_Delay(10);
+#endif
         tmp_event = event; // fix android long click problem
 #if defined(USE_SMPEG)
         // required to repeat the movie

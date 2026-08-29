@@ -1,0 +1,33 @@
+name: RPG Runtime Quality
+
+on:
+  pull_request:
+    branches: ["retrom/0.7.7beta"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rpg-runtime-quality-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Validate fork source contract
+        run: python3 .github/rpg-runtime/verify-source.py
+      - name: Build Web assets
+        run: .github/rpg-runtime/build-web.sh "$RUNNER_TEMP/rpg-runtime-output"
+      - name: Validate candidate assets
+        run: |
+          python3 .github/rpg-runtime/verify-release.py \
+            --output "$RUNNER_TEMP/rpg-runtime-output" \
+            --repository "https://github.com/$GITHUB_REPOSITORY" \
+            --tag rpg-runtime-0.7.7beta-r1-rc.1 \
+            --commit "$GITHUB_SHA"

@@ -1039,6 +1039,12 @@ int ONScripter::saveoffCommand()
     return RET_CONTINUE;
 }
 
+int ONScripter::saveGameForHost(int no)
+{
+    if (saveon_flag && internal_saveon_flag) storeSaveFile();
+    return writeSaveFile(no);
+}
+
 int ONScripter::savegameCommand()
 {
     bool savegame2_flag = false;
@@ -1862,13 +1868,12 @@ int ONScripter::locateCommand()
     return RET_CONTINUE;
 }
 
-int ONScripter::loadgameCommand()
+int ONScripter::loadGameForHost(int no)
 {
-    int no = script_h.readInt();
-
     int fadeout = mp3fadeout_duration;
     mp3fadeout_duration = 0; //don't use fadeout during a load
-    if ( !loadSaveFile( no ) ){
+    int result = loadSaveFile( no );
+    if ( !result ){
         dirty_rect.fill( screen_width, screen_height );
         flush( refreshMode() );
 
@@ -1899,6 +1904,14 @@ int ONScripter::loadgameCommand()
     }
 
     mp3fadeout_duration = fadeout;
+
+    return result;
+}
+
+int ONScripter::loadgameCommand()
+{
+    int no = script_h.readInt();
+    loadGameForHost(no);
 
     return RET_CONTINUE;
 }
@@ -2704,6 +2717,7 @@ int ONScripter::gameCommand()
     }
 #endif
 
+    applyHostRestore();
     return RET_CONTINUE;
 }
 
