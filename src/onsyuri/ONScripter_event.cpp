@@ -696,6 +696,38 @@ void ONScripter::shiftCursorOnButton( int diff )
     }
 }
 
+#if defined(WEB)
+bool ONScripter::horizontalButtonNavigation( SDL_Keycode key )
+{
+    if (key != SDLK_LEFT && key != SDLK_RIGHT) return false;
+
+    ButtonLink *button = root_button_link.next;
+    ButtonLink *leftmost = NULL, *rightmost = NULL;
+    int min_x = 0, max_x = 0, min_y = 0, max_y = 0;
+    int count = 0;
+    while (button) {
+        int x = button->select_rect.x + button->select_rect.w / 2;
+        int y = button->select_rect.y + button->select_rect.h / 2;
+        if (count == 0 || x < min_x) { min_x = x; leftmost = button; }
+        if (count == 0 || x > max_x) { max_x = x; rightmost = button; }
+        if (count == 0 || y < min_y) min_y = y;
+        if (count == 0 || y > max_y) max_y = y;
+        count++;
+        button = button->next;
+    }
+    if (count < 2 || max_x - min_x <= max_y - min_y) return false;
+
+    button = key == SDLK_LEFT ? leftmost : rightmost;
+    if (!button) return false;
+    shift_over_button = button->no;
+    mouseOverCheck(
+        button->select_rect.x + button->select_rect.w / 2,
+        button->select_rect.y + button->select_rect.h / 2
+    );
+    return true;
+}
+#endif
+
 bool ONScripter::keyDownEvent( SDL_KeyboardEvent *event )
 {
     if (event->keysym.sym == SDLK_ESCAPE){
@@ -840,8 +872,8 @@ bool ONScripter::keyPressEvent( SDL_KeyboardEvent *event )
     
     if ( event_mode & WAIT_BUTTON_MODE &&
          (((event->type == SDL_KEYUP || btndown_flag) &&
-           ((!getenter_flag && event->keysym.sym == SDLK_RETURN) ||
-            (!getenter_flag && event->keysym.sym == SDLK_KP_ENTER))) ||
+           ((!getenter_flag || current_over_button != -1) &&
+            (event->keysym.sym == SDLK_RETURN || event->keysym.sym == SDLK_KP_ENTER))) ||
           ((spclclk_flag || !useescspc_flag) && event->keysym.sym == SDLK_SPACE)) ){
         if ( event->keysym.sym == SDLK_RETURN ||
              event->keysym.sym == SDLK_KP_ENTER ||
@@ -902,6 +934,12 @@ bool ONScripter::keyPressEvent( SDL_KeyboardEvent *event )
         else if ( !spclclk_flag && useescspc_flag && event->keysym.sym == SDLK_SPACE ){
             current_button_state.button  = -11;
         }
+#if defined(WEB)
+        else if ( (event_mode & WAIT_BUTTON_MODE) &&
+                  horizontalButtonNavigation(event->keysym.sym) ){
+            return false;
+        }
+#endif
         else if (((!getcursor_flag && event->keysym.sym == SDLK_LEFT) ||
                   event->keysym.sym == SDLK_h) &&
                  (event_mode & WAIT_TEXT_MODE ||

@@ -51,7 +51,7 @@ def main() -> int:
     ))
     require("src/onsyuri/ONScripter_command.cpp", (
         "ONScripter::saveGameForHost", "ONScripter::loadGameForHost",
-        "applyHostRestore();",
+        "applyHostRestore();", "emscripten_force_exit(0);",
     ))
     require("src/onsyuri/onscripter_main.cpp", (
         "onsyuri_host_save", "onsyuri_host_load", "onsyuri_host_set_paused",
@@ -60,11 +60,16 @@ def main() -> int:
     ))
     require("src/onsyuri/ONScripter_event.cpp", (
         "while ( host_paused ) SDL_Delay(10);", "mouseOverCheck(x, y);",
+        "else if ( (event_mode & WAIT_BUTTON_MODE) &&\n"
+        "                  horizontalButtonNavigation(event->keysym.sym)",
+        "(!getenter_flag || current_over_button != -1)",
+        "SDLK_RETURN,            /* A */", "SDLK_LEFT,              /* DPAD_LEFT */",
     ))
     require("src/onsyuri/ONScripter_sound.cpp", (
         "#if !defined(WEB)\n    unsigned long length = script_h.cBR->getFileLength( filename );",
         "playVideoWeb(absolute_filename, click_flag, loop_flag);",
     ))
+    require("CMakeLists.txt", ("-sEXIT_RUNTIME=1",))
     return 0
 
 

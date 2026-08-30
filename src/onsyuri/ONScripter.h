@@ -589,6 +589,9 @@ private:
 
     void variableEditMode( SDL_KeyboardEvent *event );
     void shiftCursorOnButton( int diff );
+#if defined(WEB)
+    bool horizontalButtonNavigation( SDL_Keycode key );
+#endif
     bool keyDownEvent( SDL_KeyboardEvent *event );
     void keyUpEvent( SDL_KeyboardEvent *event );
     bool keyPressEvent( SDL_KeyboardEvent *event );

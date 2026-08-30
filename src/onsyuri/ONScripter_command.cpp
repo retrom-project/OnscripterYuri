@@ -33,6 +33,10 @@
 #include "Utils.h"
 #include <algorithm>
 
+#if defined(WEB)
+#include <emscripten.h>
+#endif
+
 #if defined(MACOSX) && (SDL_COMPILEDVERSION >= 1208)
 #include <CoreFoundation/CoreFoundation.h>
 #endif
@@ -2895,7 +2899,11 @@ int ONScripter::endCommand()
 {
     quit();
     stopSMPEG();
+#if defined(WEB)
+    emscripten_force_exit(0);
+#else
     exit(0);
+#endif
     return RET_CONTINUE; // dummy
 }
 
