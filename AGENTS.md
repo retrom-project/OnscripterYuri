@@ -1,7 +1,7 @@
 # Retrom ONScripterYuri fork maintenance rules
 
 This fork builds the ONScripterYuri browser core consumed by
-`xxxsen/retrom-runtime`. It must remain independent of Retrom application APIs,
+`retrom-project/retrom-runtime`. It must remain independent of Retrom application APIs,
 databases, review workflows, credentials, and private game content.
 
 ## Repository identity
@@ -36,9 +36,11 @@ databases, review workflows, credentials, and private game content.
   `.github/rpg-runtime/build-web.sh <empty-output-directory>` followed by
   `.github/rpg-runtime/verify-release.py` with a valid candidate identity.
 - PRs to `retrom/0.7.7beta` must pass `.github/workflows/rpg-runtime-quality.yml`.
-- Release tags are `rpg-runtime-0.7.7beta-rN`, with optional `-rc.N` only for
+- Release tags are `retrom-core-0.7.7beta-rN`, with optional `-rc.N` only for
   integration candidates. Increment `rN` for any source, build, asset, or
   adapter-contract change on this baseline.
+- Existing `rpg-runtime-*` tags are immutable historical records. Never create
+  another tag in that retired namespace.
 - Tags are annotated and immutable. The tag workflow is the only supported way
   to build and publish `onsyuri.js`, `onsyuri.wasm`, `COPYING`, and
   `rpg-runtime-release.json`; never publish aliases such as `latest` or
