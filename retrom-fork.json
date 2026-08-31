@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "forkRepository": "https://github.com/xxxsen/OnscripterYuri",
+  "forkRepository": "https://github.com/retrom-project/OnscripterYuri",
   "defaultBranch": "retrom/0.7.7beta",
   "upstreamMirrorBranch": "master",
   "upstreams": [
@@ -12,7 +12,7 @@
       "commit": "08f744b31cc1907b66a15f0402e62321a131ed81"
     }
   ],
-  "releaseTagPattern": "^rpg-runtime-0\\.7\\.7beta-r[1-9][0-9]*(-rc\\.[1-9][0-9]*)?$",
+  "releaseTagPattern": "^retrom-core-0\\.7\\.7beta-r[1-9][0-9]*(-rc\\.[1-9][0-9]*)?$",
   "adapterAbi": "ons-save",
   "releaseAssets": [
     "onsyuri.js",

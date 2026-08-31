@@ -21,7 +21,7 @@ def main() -> int:
     manifest = json.loads((ROOT / "retrom-fork.json").read_text(encoding="utf-8"))
     expected = {
         "schemaVersion": 1,
-        "forkRepository": "https://github.com/xxxsen/OnscripterYuri",
+        "forkRepository": "https://github.com/retrom-project/OnscripterYuri",
         "defaultBranch": "retrom/0.7.7beta",
         "upstreamMirrorBranch": "master",
         "upstreams": [
@@ -34,7 +34,7 @@ def main() -> int:
             }
         ],
         "releaseTagPattern": (
-            r"^rpg-runtime-0\.7\.7beta-r[1-9][0-9]*"
+            r"^retrom-core-0\.7\.7beta-r[1-9][0-9]*"
             r"(-rc\.[1-9][0-9]*)?$"
         ),
         "adapterAbi": "ons-save",
