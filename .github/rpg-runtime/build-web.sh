@@ -15,7 +15,7 @@ docker run --rm \
   --env HOME=/tmp/ons-home \
   --volume "$root:/source" \
   --workdir /source/script \
-  emscripten/emsdk:4.0.8 \
+  emscripten/emsdk@sha256:af45409f3199d88db4b1b03af0098532c8fb33a375ac257463eeb0a622870d06 \
   bash -c 'mkdir -p "$HOME" /source/build_web && export EMSDK_HOME=/emsdk && BUILD_TYPE=MinSizeRel TARGETS=all bash -e -o pipefail ./cross_web.sh'
 
 install -m 0644 "$root/build_web/onsyuri.js" "$output/onsyuri.js"
