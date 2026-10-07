@@ -503,7 +503,14 @@ bool ONScripter::doClickEnd()
     }
     else{
         event_mode = WAIT_TEXT_MODE | WAIT_INPUT_MODE | WAIT_TIMER_MODE;
+        // Only an indefinite user text wait has a serializable continuation.
+        // Capture is synchronous; no native execution can advance between its
+        // readiness check and serialization.
+        host_text_wait = true;
+        host_wait_kind = 1;
         ret = waitEvent(-1);
+        host_text_wait = false;
+        host_wait_kind = 0;
     }
 
     num_chars_in_sentence = 0;
@@ -681,6 +688,25 @@ void ONScripter::endRuby(bool flush_flag, bool lookback_flag, SDL_Surface *surfa
 
 int ONScripter::textCommand()
 {
+    if (host_text_resume) {
+        // The saved current page is already rendered. Resume the saved wait
+        // before consuming the next character, rather than replaying this line.
+        host_text_resume = false;
+        string_buffer_offset = host_text_offset;
+        clickstr_state = host_text_click;
+        if (string_buffer_offset < 0 ||
+            string_buffer_offset > (int)strlen(script_h.getStringBuffer()))
+            errorAndExit("Invalid host text checkpoint offset");
+        if (doClickEnd()) return RET_CONTINUE;
+        if (host_text_click == CLICK_NEWPAGE) newPage();
+        else {
+            if (pagetag_flag) processEOT();
+            page_enter_status = 0;
+        }
+        clickstr_state = CLICK_NONE;
+        while (processText());
+        return RET_CONTINUE;
+    }
     if (line_enter_status <= 1 && (!pretextgosub_label || saveon_flag) && internal_saveon_flag){
         storeSaveFile();
         internal_saveon_flag = false;

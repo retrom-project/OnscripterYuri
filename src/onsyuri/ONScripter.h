@@ -123,6 +123,7 @@ public:
     int  init();
     int  saveGameForHost(int no);
     int  loadGameForHost(int no);
+    bool isHostCheckpointReady() const;
     void setHostPaused(bool paused) { host_paused = paused; }
     void setHostRestoreSlot(int slot) {
         host_restore_slot = slot;
@@ -382,6 +383,12 @@ private:
     bool vsync;
     bool video;
     bool host_paused;
+    bool host_text_wait;
+    int host_wait_kind;
+    int host_saved_wait_kind;
+    bool host_text_resume;
+    int host_text_offset;
+    int host_text_click;
     int host_restore_slot;
     int host_restore_status;
     bool cacheFont;
@@ -608,6 +615,10 @@ private:
     int  loadSaveFile( int no );
     void saveMagicNumber( bool output_flag );
     void storeSaveFile();
+    void storeHostWaitFile();
+    void saveHostWaitState(bool output_flag);
+    bool loadHostWaitState();
+    int loadGame(int no, bool host_checkpoint);
     int  writeSaveFile( int no=0, const char *savestr=NULL );
 
     int  loadSaveFile2( int file_version );

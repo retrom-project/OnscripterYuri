@@ -48,15 +48,18 @@ def main() -> int:
     require("src/onsyuri/ONScripter.h", (
         "saveGameForHost", "loadGameForHost", "setHostPaused",
         "setHostRestoreSlot", "applyHostRestore", "isHostReady",
+        "isHostCheckpointReady", "storeHostWaitFile", "loadHostWaitState",
     ))
     require("src/onsyuri/ONScripter_command.cpp", (
         "ONScripter::saveGameForHost", "ONScripter::loadGameForHost",
+        "ONScripter::isHostCheckpointReady", "if (!isHostCheckpointReady()) return -1;",
         "applyHostRestore();", "emscripten_force_exit(0);",
     ))
     require("src/onsyuri/onscripter_main.cpp", (
         "onsyuri_host_save", "onsyuri_host_load", "onsyuri_host_set_paused",
         "onsyuri_host_is_ready", "onsyuri_host_did_restore_fail",
         "onsyuri_host_set_restore_slot", "onsyuriHostReady",
+        "onsyuri_host_checkpoint_ready",
     ))
     require("src/onsyuri/ONScripter_event.cpp", (
         "while ( host_paused ) SDL_Delay(10);", "mouseOverCheck(x, y);",

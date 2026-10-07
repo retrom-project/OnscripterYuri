@@ -31,6 +31,36 @@ jobs:
             --repository "https://github.com/$GITHUB_REPOSITORY" \
             --tag retrom-core-0.7.7beta-r1-rc.1 \
             --commit "$GITHUB_SHA"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Prepare pinned browser tests
+        run: |
+          npm install --prefix "$RUNNER_TEMP/ons-browser" --no-audit --no-fund playwright@1.61.1
+          "$RUNNER_TEMP/ons-browser/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Verify current wait checkpoints and native slots
+        run: |
+          browser=$(node -e "process.stdout.write(require(process.argv[1]).chromium.executablePath())" "$RUNNER_TEMP/ons-browser/node_modules/playwright")
+          node .github/rpg-runtime/checkpoint-browser.mjs \
+            "$RUNNER_TEMP/rpg-runtime-output" \
+            /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf \
+            "$RUNNER_TEMP/ons-browser/node_modules/playwright/index.mjs" \
+            "$browser" "$RUNNER_TEMP/ons-checkpoint-default"
+          ONS_TEXTGOSUB=1 node .github/rpg-runtime/checkpoint-browser.mjs \
+            "$RUNNER_TEMP/rpg-runtime-output" \
+            /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf \
+            "$RUNNER_TEMP/ons-browser/node_modules/playwright/index.mjs" \
+            "$browser" "$RUNNER_TEMP/ons-checkpoint-textgosub"
+      - name: Upload checkpoint browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ons-checkpoint-evidence-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/ons-checkpoint-default
+            ${{ runner.temp }}/ons-checkpoint-textgosub
+          if-no-files-found: warn
+          retention-days: 7
       - name: Upload branch integration candidate
         uses: actions/upload-artifact@v4
         with:

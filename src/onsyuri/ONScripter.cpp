@@ -381,6 +381,12 @@ ONScripter::ONScripter()
     vsync = true;
     video = true;
     host_paused = false;
+    host_text_wait = false;
+    host_wait_kind = 0;
+    host_saved_wait_kind = 0;
+    host_text_resume = false;
+    host_text_offset = 0;
+    host_text_click = CLICK_NONE;
     host_restore_slot = -1;
     host_restore_status = 0;
 

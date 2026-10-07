@@ -1,0 +1,29 @@
+; SPDX-License-Identifier: MIT
+; Retrom authored fixture: custom dialogue click routine and four stable waits.
+*define
+windowback
+defaultspeed 0,0,0
+textgosub *dialogue
+game
+*start
+bg "background.bmp",1
+setwindow 16,340,40,5,20,20,0,2,0,1,1,"#000000",0,320,639,479
+mov %0,7
+; UTF-8 multibyte text uses the native inline textgosub lexer. One, two, three
+; and four accented characters give visibly distinct suspended continuations.
+é@éé@ééé@éééé\
+mov %0,8
+; A native lrclick sets SKIP_TO_EOL. Finish an ordinary short text line so
+; processEOT clears that mode before the actual timed typewriter transition.
+é
+textclear
+textspeed 100
+éééééééééééééééééééééééééééééééééééééééé@
+goto *start
+*dialogue
+erasetextwindow 0
+lrclick
+getret %1
+texec
+saveon
+return

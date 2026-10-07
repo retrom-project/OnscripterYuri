@@ -1043,10 +1043,36 @@ int ONScripter::saveoffCommand()
     return RET_CONTINUE;
 }
 
+bool ONScripter::isHostCheckpointReady() const
+{
+    // Startup readiness says nothing about a resumable text wait. Effects,
+    // typewriter timers, script commands, menus and automatic progression are
+    // outside this checkpoint boundary. Check again inside the save operation.
+    return isHostReady() && host_restore_status == 0 && host_text_wait &&
+        system_menu_mode == SYSTEM_NULL &&
+        !automode_flag && autoclick_time <= 0 &&
+        !(skip_mode & (SKIP_NORMAL | SKIP_TO_EOP)) &&
+        !ctrl_pressed_status && !screen_dirty_flag &&
+        dirty_rect.bounding_box.w * dirty_rect.bounding_box.h == 0 &&
+        ((host_wait_kind == 1 &&
+          (clickstr_state == CLICK_WAIT || clickstr_state == CLICK_NEWPAGE)) ||
+         (host_wait_kind == 2 && current_page->text_count > 0 &&
+          ((textgosub_clickstr_state & 3) == CLICK_WAIT ||
+           (textgosub_clickstr_state & 3) == CLICK_NEWPAGE)));
+}
+
 int ONScripter::saveGameForHost(int no)
 {
-    if (saveon_flag && internal_saveon_flag) storeSaveFile();
-    return writeSaveFile(no);
+    if (!isHostCheckpointReady()) return -1;
+    saveAll();
+    storeHostWaitFile();
+    char filename[32];
+    sprintf(filename, "save%d.dat", no);
+    if (saveFileIOBuf(filename)) return -1;
+#if defined(WEB)
+    EM_ASM(if (window.flush_save) window.flush_save());
+#endif
+    return 0;
 }
 
 int ONScripter::savegameCommand()
@@ -1874,36 +1900,55 @@ int ONScripter::locateCommand()
 
 int ONScripter::loadGameForHost(int no)
 {
+    return loadGame(no, true);
+}
+
+int ONScripter::loadGame(int no, bool host_checkpoint)
+{
     int fadeout = mp3fadeout_duration;
     mp3fadeout_duration = 0; //don't use fadeout during a load
     int result = loadSaveFile( no );
+    if (!result && host_checkpoint && !loadHostWaitState()) result = -1;
     if ( !result ){
         dirty_rect.fill( screen_width, screen_height );
         flush( refreshMode() );
 
-        saveon_flag = true;
-        internal_saveon_flag = true;
+        if (!host_checkpoint) {
+            saveon_flag = true;
+            internal_saveon_flag = true;
+        }
         skip_mode &= ~SKIP_NORMAL;
         automode_flag = false;
         deleteButtonLink();
         deleteSelectLink();
-        text_on_flag = false;
-        indent_offset = 0;
-        line_enter_status = 0;
-        page_enter_status = 0;
-        string_buffer_offset = 0;
+        if (host_checkpoint) {
+            text_on_flag = true;
+            host_text_resume = host_saved_wait_kind == 1;
+            restoreTextBuffer(accumulation_surface);
+            dirty_rect.fill(screen_width, screen_height);
+            flush(refreshMode());
+        }
+        else {
+            text_on_flag = false;
+            indent_offset = 0;
+            line_enter_status = 0;
+            page_enter_status = 0;
+            string_buffer_offset = 0;
+        }
         break_flag = false;
+        host_text_wait = false;
+        host_wait_kind = 0;
 
         flushEvent();
 
 #ifdef USE_LUA
-        if (lua_handler.isCallbackEnabled(LUAHandler::LUA_LOAD)){
+        if (!host_checkpoint && lua_handler.isCallbackEnabled(LUAHandler::LUA_LOAD)){
             if (lua_handler.callFunction(true, "load", &no))
                 errorAndExit( lua_handler.error_str );
         }
 #endif
 
-        if (loadgosub_label)
+        if (!host_checkpoint && loadgosub_label)
             gosubReal( loadgosub_label, script_h.getCurrent() );
     }
 
@@ -1915,7 +1960,7 @@ int ONScripter::loadGameForHost(int no)
 int ONScripter::loadgameCommand()
 {
     int no = script_h.readInt();
-    loadGameForHost(no);
+    loadGame(no, false);
 
     return RET_CONTINUE;
 }
@@ -3260,7 +3305,17 @@ int ONScripter::clickCommand()
 
     event_mode = WAIT_TIMER_MODE | WAIT_INPUT_MODE;
     if (lrclick_flag) event_mode |= WAIT_RCLICK_MODE;
+    // A click command in a textgosub is the script's suspended dialogue wait.
+    // Generic title/menu click commands have no textgosub continuation and are
+    // deliberately outside the host checkpoint boundary.
+    bool text_wait = false;
+    for (NestInfo *info = root_nest_info.next; info; info = info->next)
+        if (info->textgosub_flag) text_wait = true;
+    host_text_wait = text_wait;
+    host_wait_kind = text_wait ? 2 : 0;
     waitEvent(-1);
+    host_text_wait = false;
+    host_wait_kind = 0;
 
     if (lrclick_flag)
         getret_int = (current_button_state.button == -1)?0:1;

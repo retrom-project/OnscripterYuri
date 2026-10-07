@@ -1,0 +1,18 @@
+; SPDX-License-Identifier: MIT
+; Retrom authored fixture: four separate stable waits on one script line.
+*define
+windowback
+defaultspeed 0,0,0
+savenumber 2
+savename "Save","Load","Slot"
+rmenu "Save",save,"Load",load
+game
+*start
+bg "background.bmp",1
+setwindow 16,340,40,5,20,20,0,2,0,1,1,"#000000",0,320,639,479
+mov %0,7
+`FIRST@SECOND@THIRD@FOURTH\
+mov %0,8
+textspeed 100
+`TYPEWRITER TRANSITION WITH MANY CHARACTERS@
+goto *start
