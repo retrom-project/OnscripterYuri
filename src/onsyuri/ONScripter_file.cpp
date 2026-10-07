@@ -262,6 +262,89 @@ void ONScripter::storeSaveFile()
     memcpy(save_data_buf, file_io_buf, save_data_len);
 }
 
+// Host checkpoints retain the actual suspended text continuation. Ordinary
+// native slots keep their existing savepoint serialization and load behavior.
+void ONScripter::saveHostWaitState(bool output_flag)
+{
+    writeInt(0x54585457, output_flag); // text wait
+    writeInt(host_wait_kind, output_flag);
+    writeInt(string_buffer_offset, output_flag);
+    writeInt(host_wait_kind == 2 ? textgosub_clickstr_state : clickstr_state, output_flag);
+    writeInt(sentence_font.xy[0], output_flag);
+    writeInt(sentence_font.xy[1], output_flag);
+    writeInt(line_enter_status, output_flag);
+    writeInt(page_enter_status, output_flag);
+    writeInt(indent_offset, output_flag);
+    writeInt(saveon_flag ? 1 : 0, output_flag);
+    writeInt(internal_saveon_flag ? 1 : 0, output_flag);
+    int nest_count = 0;
+    for (NestInfo *info = root_nest_info.next; info; info = info->next) ++nest_count;
+    writeInt(nest_count, output_flag);
+    for (NestInfo *info = root_nest_info.next; info; info = info->next)
+        writeInt(info->textgosub_flag ? 1 : 0, output_flag);
+    writeInt(current_page->text_count, output_flag);
+    for (int i = 0; i < current_page->text_count; ++i)
+        writeChar(current_page->text[i], output_flag);
+    writeStr(current_page->tag, output_flag);
+}
+
+void ONScripter::storeHostWaitFile()
+{
+    file_io_buf_ptr = 0;
+    saveMagicNumber(false);
+    saveSaveFile2(false);
+    saveHostWaitState(false);
+    allocFileIOBuf();
+    saveMagicNumber(true);
+    saveSaveFile2(true);
+    saveHostWaitState(true);
+}
+
+bool ONScripter::loadHostWaitState()
+{
+    const size_t maximum_text_bytes = 1024 * 1024;
+    if (file_io_buf_ptr + 13 * sizeof(int) > file_io_buf_read_len ||
+        readInt() != 0x54585457) return false;
+    host_saved_wait_kind = readInt();
+    host_text_offset = readInt();
+    host_text_click = readInt();
+    int x = readInt(), y = readInt();
+    int line = readInt(), page = readInt(), indent = readInt();
+    int saveon = readInt(), internal_saveon = readInt();
+    int nest_count = readInt();
+    int actual_nests = 0;
+    for (NestInfo *info = root_nest_info.next; info; info = info->next) ++actual_nests;
+    if (nest_count < 0 || nest_count > 1024 || nest_count != actual_nests ||
+        file_io_buf_ptr + (size_t)(nest_count + 1) * sizeof(int) > file_io_buf_read_len ||
+        (saveon != 0 && saveon != 1) || (internal_saveon != 0 && internal_saveon != 1)) return false;
+    for (NestInfo *info = root_nest_info.next; info; info = info->next) {
+        int textgosub = readInt();
+        if (textgosub != 0 && textgosub != 1) return false;
+        info->textgosub_flag = textgosub != 0;
+    }
+    int count = readInt();
+    if ((host_saved_wait_kind != 1 && host_saved_wait_kind != 2) || host_text_offset < 0 || host_text_offset > (int)maximum_text_bytes ||
+        ((host_text_click & 3) != CLICK_WAIT && (host_text_click & 3) != CLICK_NEWPAGE) ||
+        count < 0 || count > (int)maximum_text_bytes ||
+        file_io_buf_ptr + (size_t)count >= file_io_buf_read_len) return false;
+    clearCurrentPage();
+    for (int i = 0; i < count; ++i) current_page->add(readChar());
+    // A bounded NUL-terminated tag must consume the rest of this checkpoint.
+    size_t end = file_io_buf_ptr;
+    while (end < file_io_buf_read_len && file_io_buf[end]) ++end;
+    if (end + 1 != file_io_buf_read_len) return false;
+    readStr(&current_page->tag);
+    saveon_flag = saveon != 0;
+    internal_saveon_flag = internal_saveon != 0;
+    if (host_saved_wait_kind == 2) textgosub_clickstr_state = host_text_click;
+    sentence_font.xy[0] = x;
+    sentence_font.xy[1] = y;
+    line_enter_status = line;
+    page_enter_status = page;
+    indent_offset = indent;
+    return true;
+}
+
 int ONScripter::writeSaveFile( int no, const char *savestr )
 {
     saveAll();

@@ -47,6 +47,7 @@ def main() -> int:
     if any(marker not in javascript for marker in (
         "_onsyuri_host_save", "_onsyuri_host_load", "_onsyuri_host_set_paused",
         "_onsyuri_host_is_ready", "_onsyuri_host_set_restore_slot",
+        "_onsyuri_host_checkpoint_ready",
     )):
         raise SystemExit("RPG_RUNTIME_RELEASE_BRIDGE_INVALID")
 

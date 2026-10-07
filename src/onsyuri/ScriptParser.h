@@ -349,6 +349,7 @@ protected:
     unsigned char *file_io_buf;
     size_t file_io_buf_ptr;
     size_t file_io_buf_len;
+    size_t file_io_buf_read_len;
     size_t save_data_len;
     
     /* ---------------------------------------- */

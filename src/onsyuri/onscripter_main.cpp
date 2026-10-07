@@ -369,6 +369,11 @@ extern "C" EMSCRIPTEN_KEEPALIVE int onsyuri_host_is_ready()
     return ons.isHostReady() ? 1 : 0;
 }
 
+extern "C" EMSCRIPTEN_KEEPALIVE int onsyuri_host_checkpoint_ready()
+{
+    return ons.isHostCheckpointReady() ? 1 : 0;
+}
+
 extern "C" EMSCRIPTEN_KEEPALIVE int onsyuri_host_did_restore_fail()
 {
     return ons.didHostRestoreFail() ? 1 : 0;
