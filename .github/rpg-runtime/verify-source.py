@@ -60,6 +60,7 @@ def main() -> int:
         "onsyuri_host_is_ready", "onsyuri_host_did_restore_fail",
         "onsyuri_host_set_restore_slot", "onsyuriHostReady",
         "onsyuri_host_checkpoint_ready",
+        "onsyuri_host_stop",
     ))
     require("src/onsyuri/ONScripter_event.cpp", (
         "while ( host_paused ) SDL_Delay(10);", "mouseOverCheck(x, y);",
