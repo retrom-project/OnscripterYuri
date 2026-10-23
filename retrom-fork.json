@@ -13,7 +13,7 @@
     }
   ],
   "releaseTagPattern": "^retrom-core-0\\.7\\.7beta-r[1-9][0-9]*(-rc\\.[1-9][0-9]*)?$",
-  "adapterAbi": "ons-save",
+  "adapterAbi": "ons-content-io-v1",
   "releaseAssets": [
     "onsyuri.js",
     "onsyuri.wasm",

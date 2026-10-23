@@ -1,6 +1,13 @@
 # Browser checkpoint boundary
 
-The `ons-save` host ABI exports `_onsyuri_host_checkpoint_ready()` in addition to
+Project files are read on demand. `fopen()` of a file absent from the
+Emscripten file system asks `window.g_onsyuri_content` (`abi:
+"ons-content-io-v1"`) to `open(path)` and returns a read-only stdio stream:
+`size(handle)`, a synchronous cached `tryRead(handle, offset, length)`, an
+awaited `read(handle, offset, length)` and `close(handle)`. Only the byte
+ranges the engine reads are requested; nothing is copied into the file system.
+
+The `ons-content-io-v1` host ABI exports `_onsyuri_host_checkpoint_ready()` in addition to
 startup readiness. Startup readiness only means that the engine has begun
 executing the project. It does not imply that its current script state can be
 captured.
