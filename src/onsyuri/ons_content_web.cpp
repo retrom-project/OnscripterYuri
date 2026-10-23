@@ -27,8 +27,9 @@
 
 #undef fopen
 
-// Larger than the engine's typical small reads, so sequential parsing is served from memory.
-static const size_t stream_buffer_bytes = 256 * 1024;
+// stdio drops its buffer on every seek, so a large buffer multiplies FreeType's small random reads.
+// Large engine reads (archive entries, images) bypass the buffer and go straight to the bridge.
+static const size_t stream_buffer_bytes = 32 * 1024;
 
 EM_JS(int, ons_content_available, (), {
     var bridge = typeof g_onsyuri_content === "object" ? g_onsyuri_content : null;
