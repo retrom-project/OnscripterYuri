@@ -56,7 +56,7 @@ def main() -> int:
         for path in (js_path, wasm_path, license_path)
     ]
     metadata = {
-        "adapterAbi": "ons-save",
+        "adapterAbi": "ons-content-io-v1",
         "assets": assets,
         "commit": args.commit,
         "digestPolicy": "OBSERVED_CACHE_INTEGRITY_ONLY",

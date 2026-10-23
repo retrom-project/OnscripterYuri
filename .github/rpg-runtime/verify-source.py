@@ -37,7 +37,7 @@ def main() -> int:
             r"^retrom-core-0\.7\.7beta-r[1-9][0-9]*"
             r"(-rc\.[1-9][0-9]*)?$"
         ),
-        "adapterAbi": "ons-save",
+        "adapterAbi": "ons-content-io-v1",
         "releaseAssets": [
             "onsyuri.js", "onsyuri.wasm", "COPYING",
             "rpg-runtime-release.json",
@@ -73,7 +73,11 @@ def main() -> int:
         "#if !defined(WEB)\n    unsigned long length = script_h.cBR->getFileLength( filename );",
         "playVideoWeb(absolute_filename, click_flag, loop_flag);",
     ))
-    require("CMakeLists.txt", ("-sEXIT_RUNTIME=1",))
+    require("src/onsyuri/ons_content_web.cpp", (
+        "ons-content-io-v1", "fopencookie", "ons_content_try_read",
+        "EM_ASYNC_JS(int, ons_content_read",
+    ))
+    require("CMakeLists.txt", ("-sEXIT_RUNTIME=1", "src/onsyuri/ons_content_web.cpp"))
     return 0
 
 

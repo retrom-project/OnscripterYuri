@@ -35,12 +35,20 @@ const report = {inputs: {core: [...coreFiles].map(([name, bytes]) => ({name, sha
 let restore = null;
 let retainLargeReadBuffer = false;
 const html = `<!doctype html><body style="margin:0"><canvas id="canvas" tabindex="0" oncontextmenu="event.preventDefault()"></canvas><script src="/onsyuri.js"></script><script>
-window.flush_save=()=>{};window.fetch_file=()=>{};window.scale_full=()=>{};window.playVideo=()=>{};window.g_onsyuri_filemap={};window.g_onsyuri_index={gamedir:'/game',savedir:'/save'};
+window.flush_save=()=>{};window.scale_full=()=>{};window.playVideo=()=>{};
 (async()=>{const canvas=document.getElementById('canvas');const orig=canvas.getContext.bind(canvas);canvas.getContext=(type,options)=>orig(type,/webgl/i.test(type)?{...options,preserveDrawingBuffer:true}:options);
 const data=await Promise.all(['0.txt','background.bmp','default.ttf'].map(async name=>[name,new Uint8Array(await(await fetch('/'+name)).arrayBuffer())]));
 const state=await fetch('/restore');const restored=state.status===200?new Uint8Array(await state.arrayBuffer()):null;const large=await(await fetch('/large-read')).json();
+// Project files are only reachable through the on-demand content bridge.
+// tryRead serves offsets other than 0 so both the cached and the suspending
+// read paths run; every read is recorded to prove ranged access.
+const files=new Map(data.map(([name,bytes])=>['/game/'+name.toLowerCase(),{name,bytes}]));const handles=new Map();let nextHandle=1;window.contentReads=[];
+const slice=(handle,offset,length)=>{const file=handles.get(handle);window.contentReads.push({name:file.name,offset,length});return file.bytes.slice(offset,Math.min(file.bytes.length,offset+length));};
+window.g_onsyuri_content={abi:'ons-content-io-v1',async open(path){const file=files.get(path.toLowerCase());if(!file)return 0;const handle=nextHandle++;handles.set(handle,file);return handle;},
+size:handle=>handles.get(handle).bytes.length,tryRead:(handle,offset,length)=>offset===0?null:slice(handle,offset,length),
+async read(handle,offset,length){await new Promise(resolve=>setTimeout(resolve,1));return slice(handle,offset,length);},close:handle=>{handles.delete(handle);}};
 const m=await onsyuri({canvas,locateFile:name=>'/'+name,printErr:text=>console.debug(text)});window.native=m;window.g_onsyuri_module=m;
-m.FS.mkdirTree('/game');m.FS.mkdirTree('/save');for(const [name,bytes]of data)m.FS.writeFile('/game/'+name,bytes);if(restored)m.FS.writeFile('/save/save999.dat',restored);if(large)m.FS.writeFile('/game/envdata',new Uint8Array(65536));
+m.FS.mkdirTree('/game');m.FS.mkdirTree('/save');if(restored)m.FS.writeFile('/save/save999.dat',restored);if(large)m.FS.writeFile('/game/envdata',new Uint8Array(65536));
 window.beforeStartup={ready:m._onsyuri_host_checkpoint_ready(),save:m._onsyuri_host_save(998)};
 m._onsyuri_host_set_restore_slot(restored?999:-1);m.callMain(['--root','/game','--font','/game/default.ttf','--save-dir','/save','${customTextWait ? "--enc:utf8" : "--enc:gbk"}']);canvas.focus();
 })().catch(error=>{window.failure=String(error);console.error(error)});</script>`;
@@ -70,6 +78,10 @@ const open = async (payload, largeRead = false, expectRestoreFailure = false) =>
   assert.equal(await page.evaluate(() => window.failure ?? null), null);
   assert.equal(await page.evaluate(() => window.native._onsyuri_host_did_restore_fail()), expectRestoreFailure ? 1 : 0);
   assert.deepEqual(await page.evaluate(() => window.beforeStartup), {ready: 0, save: -1});
+  const content = await page.evaluate(() => ({reads: window.contentReads, copied: ["0.txt", "background.bmp", "default.ttf"].filter(name => window.native.FS.analyzePath("/game/" + name).exists)}));
+  assert.deepEqual(content.copied, [], "project files were copied into the Emscripten file system");
+  for (const name of ["0.txt", "background.bmp", "default.ttf"]) assert(content.reads.some(read => read.name === name), `${name} was not read through the content bridge`);
+  report.observations.push({case: "on-demand-content-reads", reads: content.reads.length, bytes: Object.fromEntries([...sourceFiles.keys()].map(name => [name, content.reads.filter(read => read.name === name).reduce((sum, read) => sum + read.length, 0)]))});
   return page;
 };
 const capture = async page => Buffer.from(await page.evaluate(() => {
