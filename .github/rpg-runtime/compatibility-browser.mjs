@@ -188,9 +188,10 @@ cases.set('errorsave', { script: define + `errorsave\ngame\n*start\nbg #000000,1
         assert.equal(await page.evaluate(() => window.native._onsyuri_host_checkpoint_ready()), 0, 'error dialog exposed resumable wait');
     } });
 cases.set('audio-duck', { script: define + `bgmdownmode 1\ngame\n*start\nbg #000000,1\nbgm "music.wav"\nclick\ndwave 0,"voice.wav"\nclick\nbgmdownmode 0\ndwave 0,"voice.wav"\nclick\ngoto *start\n`, async verify(page) {
-        const normal = await tone(page, 700);
+        const normal = await steadyTone(page, 700);
         assert(normal > -65, 'music is silent');
         await advance(page);
+        await audible(page, 1100, 'voice never became audible');
         const ducked = await tone(page, 700), voice = await tone(page, 1100);
         assert(voice > -65, 'voice is silent');
         assert(ducked < normal - 4 && ducked > normal - 8, 'voice did not halve music gain');
@@ -199,18 +200,22 @@ cases.set('audio-duck', { script: define + `bgmdownmode 1\ngame\n*start\nbg #000
         assert(Math.abs(restored - normal) < 1.5, 'voice completion did not restore music');
         await advance(page);
         assert(Math.abs(await tone(page, 700) - normal) < 1.5, 'bgmdownmode 0 kept music ducked');
+        return {normalDb: normal, duckedDb: ducked, voiceDb: voice, restoredDb: restored};
     } });
 cases.set('cd-fade', { script: define + `cdfadeout 1200\ngame\n*start\nbg #000000,1\nplay "*1"\nclick\nplaystop\nbg #00aa00,1\nclick\ngoto *start\n`, async verify(page) {
-        const normal = await tone(page, 700);
+        const normal = await steadyTone(page, 700);
         assert(normal > -65, 'simulated CD track is silent');
+        const started = performance.now();
         await advance(page);
-        const early = await tone(page, 700);
+        const early = await tone(page, 700), earlyMs = performance.now() - started;
         await page.waitForTimeout(400);
-        const late = await tone(page, 700);
-        assert(early < normal - 0.3 && late < early - 1.5 && late > -70, 'CD track did not fade over time');
+        const late = await tone(page, 700), lateMs = performance.now() - started;
+        assert(early < normal - 0.3 && late < early - 1.5 && late > -70,
+            `CD track did not fade over time: ${JSON.stringify({normal, early, late, earlyMs, lateMs})}`);
         await page.waitForTimeout(1000);
         assert(await tone(page, 700) < -85, 'CD track did not stop');
         assert.deepEqual(await pixel(page, 10, 10), [0, 170, 0, 255], 'fade wait did not finish');
+        return {normalDb: normal, earlyDb: early, lateDb: late, earlyMs, lateMs};
     } });
 cases.set('state-restore', { script: define + `humanpos 100,320,540\nbtnnowindowerase\nnoteraseman\nbgmdownmode 1\ncdfadeout 500\nmousecursor "cursor.cur"\nresetmenu\ninsertmenu "Parent",sub\ngame\n*start\nbg #000000,1\n` + windowScript + `font "default.ttf"\nspfont "serif.ttf",28,28,0,0,0,0\nlsp 10,":s#ffffffMMMM",20,20\nspfont clear\nlsp 11,":s/28,28,0;#ffffffMMMM",20,80\nprint 1\nfont "serif.ttf"\n` + '`FIRST@\n' + `insertmenu "Child",version,1\nld l,":c;human.bmp",1\n` + '`SECOND@\n' + `goto *start\n`, async verify(page) {
         await page.waitForFunction(() => window.native._onsyuri_host_checkpoint_ready() === 1);
@@ -253,7 +258,8 @@ cases.set('lookback-voice', { script: define + `lookbackvoice "flip.wav"\ngame\n
         await audible(page, 1700, 'lookback page change did not play the page sound');
         assert(!(await page.evaluate(() => window.reads)).some(r => /wav.*voice/.test(r.name)), 'lookback replayed story voice');
     } });
-const common = new Map([["default.ttf", await fs.readFile(sans)], ["serif.ttf", await fs.readFile(serif)], ["human.bmp", bmp(20, 100, [0, 255, 0])], ["cursor.cur", cur([0, 255, 0])], ["cursor.ani", ani()], ["legacy.ani", ani(true)], ["music.wav", wav(700, 1)], ["cd/track01.wav", wav(700, 1)], ["voice.wav", wav(1100, 2)], ["flip.wav", wav(1700, .6)]]);
+// The CD fixture must outlast startup and its 1.2-second fade; natural track end is not a fade failure.
+const common = new Map([["default.ttf", await fs.readFile(sans)], ["serif.ttf", await fs.readFile(serif)], ["human.bmp", bmp(20, 100, [0, 255, 0])], ["cursor.cur", cur([0, 255, 0])], ["cursor.ani", ani()], ["legacy.ani", ani(true)], ["music.wav", wav(700, 1)], ["cd/track01.wav", wav(700, 5)], ["voice.wav", wav(1100, 2)], ["flip.wav", wav(1700, .6)]]);
 const coreFiles = new Map(await Promise.all(["onsyuri.js", "onsyuri.wasm"].map(async (name) => [name, await fs.readFile(path.join(assets, name))])));
 const selected = process.env.ONS_CASES?.split(",");
 const report = { inputs: { core: [...coreFiles].map(([name, bytes]) => ({ name, sha256: sha(bytes), sizeBytes: bytes.length })), resources: [...common].map(([name, bytes]) => ({ name, sha256: sha(bytes) })) }, cases: [] };
@@ -312,6 +318,18 @@ async function audible(page, hz, message) {
     }
     assert.fail(message);
 }
+async function steadyTone(page, hz) {
+    // Core readiness precedes asynchronous audio reads and the first FFT window.
+    // Establish an audible, stable baseline before changing the actual mixer gain.
+    let previous = -Infinity, stable = 0;
+    for (let i = 0; i < 24; i++) {
+        const value = await tone(page, hz);
+        stable = value > -65 && Math.abs(value - previous) < 0.3 ? stable + 1 : 0;
+        if (stable >= 2) return value;
+        previous = value;
+    }
+    assert.fail('audio did not reach a stable audible baseline');
+}
 async function tone(page, hz) {
     await page.waitForTimeout(120);
     return page.evaluate(hz => { const a = window.audioAnalyser; if (!a)
@@ -340,7 +358,8 @@ try {
             await page.waitForFunction(() => window.failure || window.native?._onsyuri_host_is_ready() === 1, null, { timeout: 30000 });
             assert.equal(await page.evaluate(() => window.failure ?? null), null);
             await page.waitForTimeout(300);
-            await entry.verify(page);
+            const observations = await entry.verify(page);
+            if (observations) result.observations = observations;
             assert.deepEqual(result.errors, []);
             if (!entry.allowDiagnostics)
                 assert(!result.console.some(x => /command .*not supported yet|Parse error|Script error/.test(x)), "script diagnostics");
