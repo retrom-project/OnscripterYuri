@@ -51,6 +51,12 @@ jobs:
             /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf \
             "$RUNNER_TEMP/ons-browser/node_modules/playwright/index.mjs" \
             "$browser" "$RUNNER_TEMP/ons-checkpoint-textgosub"
+          node .github/rpg-runtime/compatibility-browser.mjs \
+            "$RUNNER_TEMP/rpg-runtime-output" \
+            /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf \
+            /usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf \
+            "$RUNNER_TEMP/ons-browser/node_modules/playwright/index.mjs" \
+            "$browser" "$RUNNER_TEMP/ons-compatibility"
       - name: Upload checkpoint browser evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -59,6 +65,7 @@ jobs:
           path: |
             ${{ runner.temp }}/ons-checkpoint-default
             ${{ runner.temp }}/ons-checkpoint-textgosub
+            ${{ runner.temp }}/ons-compatibility
           if-no-files-found: warn
           retention-days: 7
       - name: Upload branch integration candidate
