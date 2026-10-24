@@ -44,6 +44,9 @@ LayerInfo layer_info[MAX_LAYER_NUM];
 
 ScriptParser::ScriptParser()
 {
+    script_h.setErrorHandler([](void *context) {
+        static_cast<ScriptParser *>(context)->beforeErrorExit();
+    }, this);
     debug_level = 0;
     srand( time(NULL) );
     rand();
@@ -593,6 +596,7 @@ void ScriptParser::readLog( ScriptHandler::LogInfo &info )
 
 void ScriptParser::errorAndExit( const char *str, const char *reason )
 {
+    beforeErrorExit();
     if ( reason )
         utils::printError(" *** Parse error at %s:%d [%s]; %s ***\n",
                  current_label_info.name,

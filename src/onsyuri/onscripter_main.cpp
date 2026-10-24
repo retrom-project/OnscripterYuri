@@ -288,8 +288,19 @@ extern "C" EMSCRIPTEN_KEEPALIVE void onsyuri_host_set_paused(int paused)
     ons.setHostPaused(paused != 0);
 }
 
+extern "C" EMSCRIPTEN_KEEPALIVE void onsyuri_menu_action(int action, int value)
+{
+    ons.queueCompatibilityAction(action, value);
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE int onsyuri_menu_value(int key)
+{
+    return ons.compatibilityValue(key);
+}
+
 extern "C" EMSCRIPTEN_KEEPALIVE void onsyuri_host_stop()
 {
+    ons.cleanupCompatibility();
     // Stop Asyncify continuations and SDL callbacks before the host releases
     // its file bridge and per-instance globals. Pausing alone keeps them live.
     emscripten_force_exit(0);

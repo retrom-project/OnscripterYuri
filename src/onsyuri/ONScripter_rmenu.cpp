@@ -639,6 +639,9 @@ void ONScripter::executeSystemLookback()
         return;
     }
 
+    if (!compatibility.lookback_voice.empty())
+        playSound(compatibility.lookback_voice.c_str(), SOUND_CHUNK, false, MIX_WAVE_CHANNEL);
+
     while(1){
         setupLookbackButton();
         refreshMouseOverButton();
@@ -677,12 +680,15 @@ void ONScripter::executeSystemLookback()
             return;
         }
         
+        Page *previous_page = current_page;
         if ( current_button_state.button == 1 ||
              current_button_state.button == -2 ){
             current_page = current_page->previous;
         }
         else
             current_page = current_page->next;
+        if (current_page != previous_page && !compatibility.lookback_voice.empty())
+            playSound(compatibility.lookback_voice.c_str(), SOUND_CHUNK, false, MIX_WAVE_CHANNEL);
     }
 }
 

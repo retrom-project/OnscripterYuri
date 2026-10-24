@@ -24,6 +24,7 @@
  */
 
 #include "ONScripter.h"
+#include <cstdint>
 #include "Utils.h"
 #if defined(LINUX)
 #include <sys/types.h>
@@ -165,6 +166,7 @@ ONS_Key transControllerButton(Uint8 button)
 
 void ONScripter::flushEventSub( SDL_Event &event )
 {
+    if (event.type == ONS_CHUNK_EVENT && event.user.code == 0) applyMusicVolume();
     if ( event.type == ONS_MUSIC_EVENT ){
         if ( music_play_loop_flag ||
              (cd_play_loop_flag && !cdaudio_flag ) ){
@@ -186,7 +188,8 @@ void ONScripter::flushEventSub( SDL_Event &event )
         if (skip_mode & (SKIP_NORMAL | SKIP_TO_EOP) ||
             ctrl_pressed_status) {
             cur_fade_duration = 0;
-            Mix_VolumeMusic( 0 );
+            compatibility.fade_gain = 0.0;
+            applyMusicVolume();
         }
         Uint32 tmp = SDL_GetTicks() - mp3fade_start;
         if ( tmp < cur_fade_duration ) {
@@ -194,7 +197,8 @@ void ONScripter::flushEventSub( SDL_Event &event )
             tmp *= music_volume;
             tmp /= cur_fade_duration;
 
-            Mix_VolumeMusic( tmp * MIX_MAX_VOLUME / 100 );
+            compatibility.fade_gain = music_volume ? static_cast<double>(tmp) / music_volume : 0.0;
+            applyMusicVolume();
         } else {
             char *ext = NULL;
             if (fadeout_music_file_name) ext = strrchr(fadeout_music_file_name, '.');
@@ -214,14 +218,16 @@ void ONScripter::flushEventSub( SDL_Event &event )
         if (skip_mode & (SKIP_NORMAL | SKIP_TO_EOP) ||
             ctrl_pressed_status) {
             cur_fade_duration = 0;
-            Mix_VolumeMusic( music_volume * MIX_MAX_VOLUME / 100 );
+            compatibility.fade_gain = 1.0;
+            applyMusicVolume();
         }
         Uint32 tmp = SDL_GetTicks() - mp3fade_start;
         if ( tmp < cur_fade_duration ) {
             tmp *= music_volume;
             tmp /= cur_fade_duration;
 
-            Mix_VolumeMusic( tmp * MIX_MAX_VOLUME / 100 );
+            compatibility.fade_gain = music_volume ? static_cast<double>(tmp) / music_volume : 0.0;
+            applyMusicVolume();
         } else {
             if (timer_bgmfade_id) SDL_RemoveTimer( timer_bgmfade_id );
             timer_bgmfade_id = 0;
@@ -590,7 +596,8 @@ void ONScripter::variableEditMode( SDL_KeyboardEvent *event )
 
           case EDIT_MP3_VOLUME_MODE:
             music_volume = variable_edit_num;
-            Mix_VolumeMusic( music_volume * MIX_MAX_VOLUME / 100 );
+            compatibility.fade_gain = 1.0;
+            applyMusicVolume();
             break;
 
           case EDIT_SE_VOLUME_MODE:
@@ -1374,6 +1381,11 @@ void ONScripter::runEventLoop()
             keyUpEvent( &event.key );
             ret = keyPressEvent( &event.key );
             if (ret) return;
+            break;
+
+          case ONS_COMPAT_MENU_EVENT:
+            executeCompatibilityAction(event.user.code, static_cast<int>(reinterpret_cast<intptr_t>(event.user.data1)));
+            if (system_menu_mode != SYSTEM_NULL) return;
             break;
 
           case ONS_TIMER_EVENT:

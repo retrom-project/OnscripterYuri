@@ -696,6 +696,7 @@ int ONScripter::init()
 
 void ONScripter::reset()
 {
+    resetCompatibility();
     automode_flag = false;
     automode_time = DEFAULT_AUTOMODE_TIME;
     autoclick_time = 0;
@@ -1235,6 +1236,7 @@ void ONScripter::deleteSelectLink()
 
 void ONScripter::clearCurrentPage()
 {
+    if (!compatibility_restoring) applyPendingFont();
     sentence_font.clear();
 
     int num = (sentence_font.num_xy[0]*2+1)*sentence_font.num_xy[1];
@@ -1532,6 +1534,7 @@ int ONScripter::refreshMode()
 
 void ONScripter::quit()
 {
+    cleanupCompatibility();
     saveAll();
 
 #ifdef USE_CDROM

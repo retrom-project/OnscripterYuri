@@ -165,7 +165,7 @@ int ONScripter::vspCommand()
 int ONScripter::voicevolCommand()
 {
     voice_volume = script_h.readInt();
-    if ( wave_sample[0] ) Mix_Volume( 0, voice_volume * MIX_MAX_VOLUME / 100 );
+    applyWaveVolumes();
     
     return RET_CONTINUE;
 }
@@ -429,7 +429,8 @@ int ONScripter::strspCommand()
 
 int ONScripter::stopCommand()
 {
-    mp3stopCommand();
+    if (current_cd_track >= 0) playstopCommand();
+    else mp3stopCommand();
     wavestopCommand();
     
     return RET_CONTINUE;
@@ -651,12 +652,7 @@ int ONScripter::skipoffCommand()
 int ONScripter::sevolCommand()
 {
     se_volume = script_h.readInt();
-
-    for ( int i=1 ; i<ONS_MIX_CHANNELS ; i++ )
-        if ( wave_sample[i] ) Mix_Volume( i, se_volume * MIX_MAX_VOLUME / 100 );
-
-    if ( wave_sample[MIX_LOOPBGM_CHANNEL0] ) Mix_Volume( MIX_LOOPBGM_CHANNEL0, se_volume * MIX_MAX_VOLUME / 100 );
-    if ( wave_sample[MIX_LOOPBGM_CHANNEL1] ) Mix_Volume( MIX_LOOPBGM_CHANNEL1, se_volume * MIX_MAX_VOLUME / 100 );
+    applyWaveVolumes();
     
     return RET_CONTINUE;
 }
@@ -1048,7 +1044,7 @@ bool ONScripter::isHostCheckpointReady() const
     // Startup readiness says nothing about a resumable text wait. Effects,
     // typewriter timers, script commands, menus and automatic progression are
     // outside this checkpoint boundary. Check again inside the save operation.
-    return isHostReady() && host_restore_status == 0 && host_text_wait &&
+    return isHostReady() && !compatibility_error_active && host_restore_status == 0 && host_text_wait &&
         system_menu_mode == SYSTEM_NULL &&
         !automode_flag && autoclick_time <= 0 &&
         !(skip_mode & (SKIP_NORMAL | SKIP_TO_EOP)) &&
@@ -1068,7 +1064,7 @@ int ONScripter::saveGameForHost(int no)
     storeHostWaitFile();
     char filename[32];
     sprintf(filename, "save%d.dat", no);
-    if (saveFileIOBuf(filename)) return -1;
+    if (saveFileIOBuf(filename) || !writeCompatibilityState(no, captureCompatibilityState())) return -1;
 #if defined(WEB)
     EM_ASM(if (window.flush_save) window.flush_save());
 #endif
@@ -1292,6 +1288,7 @@ int ONScripter::printCommand()
 
 int ONScripter::playstopCommand()
 {
+    fadeCDAudio();
     stopBGM( false );
 
     return RET_CONTINUE;
@@ -1305,12 +1302,13 @@ int ONScripter::playCommand()
 
     const char *buf = script_h.readStr();
     if ( buf[0] == '*' ){
-        cd_play_loop_flag = loop_flag;
         int new_cd_track = atoi( buf + 1 );
 #ifdef CONTINUOUS_PLAY        
         if ( current_cd_track != new_cd_track ) {
 #endif        
+            fadeCDAudio();
             stopBGM( false );
+            cd_play_loop_flag = loop_flag;
             current_cd_track = new_cd_track;
             playCDAudio();
 #ifdef CONTINUOUS_PLAY        
@@ -1432,7 +1430,7 @@ int ONScripter::mpegplayCommand()
 int ONScripter::mp3volCommand()
 {
     music_volume = script_h.readInt();
-    Mix_VolumeMusic( music_volume * MIX_MAX_VOLUME / 100 );
+    applyMusicVolume();
 
     return RET_CONTINUE;
 }
@@ -1907,7 +1905,9 @@ int ONScripter::loadGame(int no, bool host_checkpoint)
 {
     int fadeout = mp3fadeout_duration;
     mp3fadeout_duration = 0; //don't use fadeout during a load
+    compatibility_restoring = true;
     int result = loadSaveFile( no );
+    compatibility_restoring = false;
     if (!result && host_checkpoint && !loadHostWaitState()) result = -1;
     if ( !result ){
         dirty_rect.fill( screen_width, screen_height );
@@ -1988,7 +1988,8 @@ int ONScripter::ldCommand()
 
         if ( ai->image_surface ){
             ai->visible = true;
-            ai->orig_pos.x = screen_width * (no+1) * screen_ratio2 / (4 * screen_ratio1) - ai->orig_pos.w / 2;
+            ai->orig_pos.x = (compatibility.human_position_set ? compatibility.human_position[no] :
+                screen_width * (no+1) * screen_ratio2 / (4 * screen_ratio1)) - ai->orig_pos.w / 2;
             ai->orig_pos.y = underline_value - ai->image_surface->h * screen_ratio2 / screen_ratio1;
             ai->scalePosXY( screen_ratio1, screen_ratio2 );
             dirty_rect.add( ai->pos );
@@ -2380,6 +2381,7 @@ int ONScripter::getspmodeCommand()
     script_h.pushVariable();
 
     int no = script_h.readInt();
+    if (no < 0 || no >= MAX_SPRITE_NUM) errorAndExit("getspmode: sprite number out of range");
     script_h.setInt( &script_h.pushed_variable, sprite_info[no].visible?1:0 );
 
     return RET_CONTINUE;
@@ -2963,6 +2965,7 @@ int ONScripter::dwavestopCommand()
         Mix_FreeChunk( wave_sample[ch] );
         wave_sample[ch] = NULL;
     }
+    if (ch == 0) applyMusicVolume();
 
     return RET_CONTINUE;
 }
@@ -3436,11 +3439,11 @@ int ONScripter::btnwaitCommand()
     bexec_flag = false;
 
     if ( script_h.isName( "btnwait2" ) ){
-        leaveTextDisplayMode();
+        if (!compatibility.keep_button_window) leaveTextDisplayMode();
     }
     else if ( script_h.isName( "btnwait" ) ){
         del_flag = true;
-        leaveTextDisplayMode();
+        if (!compatibility.keep_button_window) leaveTextDisplayMode();
     }
     else if ( script_h.isName( "textbtnwait" ) ){
         textbtn_flag = true;

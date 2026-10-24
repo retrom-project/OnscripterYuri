@@ -106,7 +106,7 @@ int ONScripter::playSound(const char *filename, int format, bool loop_flag, int 
         if (music_info == NULL) {
             utils::printError("can't load music \"%s\": %s\n", filename, Mix_GetError());
         }
-        Mix_VolumeMusic( music_volume );
+        applyMusicVolume();
         if ( music_info && Mix_PlayMusic( music_info, (music_play_loop_flag&&music_loopback_offset==0.0)?-1:0 ) == 0 ){
             music_buffer = buffer;
             music_buffer_length = length;
@@ -185,15 +185,16 @@ int ONScripter::playWave(Mix_Chunk *chunk, int format, bool loop_flag, int chann
     if (!chunk) return -1;
 
     Mix_Pause( channel );
-    if      (channel == 0)               Mix_Volume( channel, voice_volume * MIX_MAX_VOLUME / 100 );
+    if      (channel == 0)               Mix_Volume( channel, volume_on_flag ? voice_volume * MIX_MAX_VOLUME / 100 : 0 );
     else if (channel == MIX_BGM_CHANNEL) Mix_Volume( channel, music_volume * MIX_MAX_VOLUME / 100 );
-    else                                 Mix_Volume( channel, se_volume * MIX_MAX_VOLUME / 100 );
+    else                                 Mix_Volume( channel, volume_on_flag ? se_volume * MIX_MAX_VOLUME / 100 : 0 );
 
     if ( !(format & SOUND_PRELOAD) )
         Mix_PlayChannel( channel, chunk, loop_flag?-1:0 );
 
     if ( wave_sample[channel] ) Mix_FreeChunk( wave_sample[channel] );
     wave_sample[channel] = chunk;
+    if (channel == 0 || channel == MIX_BGM_CHANNEL) applyMusicVolume();
 
     return 0;
 }
@@ -221,7 +222,7 @@ int ONScripter::playMIDI(bool loop_flag)
     if (midi_cmd) midi_looping = 0;
 #endif
     
-    Mix_VolumeMusic(music_volume);
+    applyMusicVolume();
     Mix_PlayMusic(midi_info, midi_looping);
     current_cd_track = -2; 
     
@@ -424,6 +425,7 @@ int ONScripter::playAVI( const char *filename, bool click_flag )
 
 void ONScripter::stopBGM( bool continue_flag )
 {
+    compatibility.fade_gain = 1.0;
     removeBGMFadeEvent();
     if (timer_bgmfade_id) SDL_RemoveTimer( timer_bgmfade_id );
     timer_bgmfade_id = 0;

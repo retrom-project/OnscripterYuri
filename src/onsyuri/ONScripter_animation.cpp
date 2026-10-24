@@ -183,6 +183,7 @@ void ONScripter::setupAnimationInfo( AnimationInfo *anim, FontInfo *info )
             f_info.ttf_font[1] = NULL;
         }
 
+        configureCompatibilityFont(anim, f_info);
         if (f_info.ttf_font[0] == NULL)
             f_info.openFont( font_file, screen_ratio1, screen_ratio2 );
 
@@ -317,6 +318,12 @@ void ONScripter::parseTaggedString( AnimationInfo *anim )
                 anim->font_size_xy[1] = sentence_font.font_size_xy[1];
                 anim->font_pitch[0] = sentence_font.pitch_xy[0];
                 anim->font_pitch[1] = sentence_font.pitch_xy[1];
+                if (compatibility.sprite_font.metrics) {
+                    anim->font_size_xy[0] = compatibility.sprite_font.width;
+                    anim->font_size_xy[1] = compatibility.sprite_font.height;
+                    anim->font_pitch[0] = compatibility.sprite_font.pitch_x;
+                    anim->font_pitch[1] = compatibility.sprite_font.pitch_y;
+                }
             }
 
             while(buffer[0] != '#' && buffer[0] != '\0') buffer++;
