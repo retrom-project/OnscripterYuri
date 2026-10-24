@@ -209,6 +209,7 @@ int ONScripter::loadSaveFile( int no )
 {
     char filename[32];
     sprintf( filename, "save%d.dat", no );
+    if (!loadCompatibilityState(no)) return -1;
     if (loadFileIOBuf( filename ) == 0){
         utils::printError("can't open save file %s\n", filename );
         return -1;
@@ -260,6 +261,7 @@ void ONScripter::storeSaveFile()
     saveSaveFile2( true );
     save_data_len = file_io_buf_ptr;
     memcpy(save_data_buf, file_io_buf, save_data_len);
+    compatibility_savepoint = captureCompatibilityState();
 }
 
 // Host checkpoints retain the actual suspended text continuation. Ordinary
@@ -358,6 +360,7 @@ int ONScripter::writeSaveFile( int no, const char *savestr )
         utils::printError("can't open save file %s for writing\n", filename );
         return -1;
     }
+    if (!writeCompatibilityState(no, compatibility_savepoint)) return -1;
 #if defined(WEB)
     EM_ASM(
         if(window.flush_save) window.flush_save();

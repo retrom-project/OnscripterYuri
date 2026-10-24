@@ -116,6 +116,9 @@ public:
     // basic parser function
     const char *readToken();
     const char *readLabel();
+    void setErrorHandler(void (*callback)(void *), void *context) {
+        error_callback = callback; error_context = context;
+    }
     const char *readStr();
     int  readInt();
     void skipToken();
@@ -248,6 +251,8 @@ public:
     BaseReader *cBR;
     
 private:
+    void (*error_callback)(void *) = NULL;
+    void *error_context = NULL;
     enum { OP_INVALID = 0, // 000
            OP_PLUS    = 2, // 010
            OP_MINUS   = 3, // 011

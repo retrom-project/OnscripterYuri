@@ -29,6 +29,7 @@
 #include "ScriptParser.h"
 #include "DirtyRect.h"
 #include "ButtonLink.h"
+#include "ONSCompatibility.h"
 
 #if defined(ANDROID)
 #include "SDL.h"
@@ -151,6 +152,14 @@ public:
     } func_hash['z'-'a'+1];
 
     void makeFuncLUT();
+
+    int compatibilityCommand();
+    int compatibilityFontCommand();
+    int compatibilityMenuCommand();
+    void cleanupCompatibility();
+    void queueCompatibilityAction(int action, int value);
+    int compatibilityValue(int key) const;
+    void compatibilityUserFont(const char *path);
 
     int yesnoboxCommand();
     int wavestopCommand();
@@ -349,6 +358,27 @@ public:
     void updateEffectDst();
     
 private:
+    ONSCompatibility compatibility;
+    std::string compatibility_savepoint;
+    bool compatibility_restoring = false;
+    bool compatibility_error_active = false;
+    void resetCompatibility();
+    void applyMusicVolume();
+    void applyWaveVolumes();
+    void applyPendingFont();
+    std::string resolveCompatibilityFont(const char *name);
+    void configureCompatibilityFont(AnimationInfo *anim, FontInfo &info);
+    void updateCompatibilityMenu();
+    void executeCompatibilityAction(int action, int value);
+    void loadCompatibilityCursor(const char *name);
+    void showCompatibilityError(bool saved);
+    void fadeCDAudio();
+    std::string captureCompatibilityState() const;
+    bool restoreCompatibilityState(const std::string &bytes);
+    bool writeCompatibilityState(int no, const std::string &bytes);
+    bool loadCompatibilityState(int no);
+    void beforeErrorExit() override;
+
     // ----------------------------------------
     // global variables and methods
     enum { IDLE_EVENT_MODE  = 0,

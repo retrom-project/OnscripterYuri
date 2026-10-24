@@ -493,6 +493,10 @@ set(ONSYURI_CODE
     src/onsyuri/ONScripter.cpp
     src/onsyuri/ONScripter_animation.cpp
     src/onsyuri/ONScripter_command.cpp
+    src/onsyuri/ONScripter_compatibility.cpp
+    src/onsyuri/ONScripter_compatibility_font.cpp
+    src/onsyuri/ONScripter_compatibility_ui.cpp
+    src/onsyuri/ONScripter_compatibility_save.cpp
     src/onsyuri/ONScripter_effect.cpp
     src/onsyuri/ONScripter_effect_breakup.cpp
     src/onsyuri/ONScripter_event.cpp

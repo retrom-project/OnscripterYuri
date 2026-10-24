@@ -488,6 +488,7 @@ protected:
     void readColor( uchar3 *color, const char *buf );
     
     void errorAndExit( const char *str, const char *reason=NULL );
+    virtual void beforeErrorExit() {}
 
     void allocFileIOBuf();
     int saveFileIOBuf( const char *filename, int offset=0, const char *savestr=NULL );

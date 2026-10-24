@@ -44,6 +44,7 @@ extern int psp_power_resume_number;
 static struct FontContainer{
     FontContainer *next;
     int size;
+    std::string path;
     TTF_Font *font[2];
 #if defined(PSP)
     SDL_RWops *rw_ops;
@@ -83,6 +84,8 @@ FontInfo::FontInfo()
 
 void FontInfo::reset()
 {
+    font_path.clear();
+    ttf_font[0] = ttf_font[1] = NULL;
     tateyoko_mode = YOKO_MODE;
     clear();
 
@@ -94,20 +97,24 @@ void FontInfo::reset()
 
 void *FontInfo::openFont( char *font_file, int ratio1, int ratio2 )
 {
+    if (!font_path.empty()) font_file = const_cast<char *>(font_path.c_str());
     int font_size;
     if ( font_size_xy[0] < font_size_xy[1] )
         font_size = font_size_xy[0];
     else
         font_size = font_size_xy[1];
 
+    font_size = font_size * ratio1 / ratio2;
+    if (font_size <= 0 || !font_file) return NULL;
     FontContainer *fc = &root_font_container;
     while( fc->next ){
-        if ( fc->next->size == font_size ) break;
+        if (fc->next->size == font_size && fc->next->path == font_file) break;
         fc = fc->next;
     }
     if ( !fc->next ){
         fc->next = new FontContainer();
         fc->next->size = font_size;
+        fc->next->path = font_file;
         SDL_RWops *rwops = NULL;
         bool useFile = (cache_font_file == NULL || strcmp(cache_font_file, font_file) != 0);
         if (useFile) {
@@ -125,20 +132,21 @@ void *FontInfo::openFont( char *font_file, int ratio1, int ratio2 )
         if ( rwops == NULL ) return NULL;
 #if defined(PSP)
         fc->next->rw_ops = SDL_RWFromFile(font_file, "r");
-        fc->next->font[0] = TTF_OpenFontRW( fc->next->rw_ops, SDL_TRUE, font_size * ratio1 / ratio2 );
+        fc->next->font[0] = TTF_OpenFontRW( fc->next->rw_ops, SDL_TRUE, font_size );
 #if (SDL_TTF_MAJOR_VERSION>=2) && (SDL_TTF_MINOR_VERSION>=0) && (SDL_TTF_PATCHLEVEL>=10)
-        fc->next->font[1] = TTF_OpenFontRW( fc->next->rw_ops, SDL_TRUE, font_size * ratio1 / ratio2 );
+        fc->next->font[1] = TTF_OpenFontRW( fc->next->rw_ops, SDL_TRUE, font_size );
         TTF_SetFontOutline(fc->next->font[1], 1);
 #endif
         fc->next->power_resume_number = psp_power_resume_number;
         strcpy(fc->next->name, font_file);
 #else
         // fix android or web with fdopen 
-        if (useFile) fc->next->font[0] = TTF_OpenFontRW(rwops, SDL_TRUE, font_size * ratio1 / ratio2);
-        else fc->next->font[0] = TTF_OpenFontRW(SDL_RWFromConstMem(font_cache, font_cache_size), 1, font_size * ratio1 / ratio2);
-        rwops->seek(rwops, 0, SEEK_SET); // this is important to reload again !
-        if (useFile) fc->next->font[1] = TTF_OpenFontRW(rwops, SDL_TRUE, font_size * ratio1 / ratio2);
-        else fc->next->font[1] = TTF_OpenFontRW(SDL_RWFromConstMem(font_cache, font_cache_size), 1, font_size * ratio1 / ratio2);
+        if (useFile) fc->next->font[0] = TTF_OpenFontRW(rwops, SDL_TRUE, font_size);
+        else fc->next->font[0] = TTF_OpenFontRW(SDL_RWFromConstMem(font_cache, font_cache_size), 1, font_size);
+        FILE *outline_fp = useFile ? ::fopen(font_file, "rb") : NULL;
+        SDL_RWops *outline_rw = outline_fp ? SDL_RWFromFP(outline_fp, SDL_TRUE) : NULL;
+        if (useFile) fc->next->font[1] = outline_rw ? TTF_OpenFontRW(outline_rw, SDL_TRUE, font_size) : NULL;
+        else fc->next->font[1] = TTF_OpenFontRW(SDL_RWFromConstMem(font_cache, font_cache_size), 1, font_size);
         
         if (fc->next->font[1] == nullptr) {
             utils::printError("Open font failed: %s\n", TTF_GetError());
@@ -155,6 +163,7 @@ void *FontInfo::openFont( char *font_file, int ratio1, int ratio2 )
     }
 #endif
 
+    if (!fc->next->font[0]) return NULL;
     ttf_font[0] = (void*)fc->next->font[0];
     ttf_font[1] = (void*)fc->next->font[1];
     

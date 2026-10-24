@@ -67,6 +67,8 @@ static ONScripter::FuncLUT func_lut[] = {
     {"tal",				&ONScripter::talCommand},
     {"tablegoto",		&ONScripter::tablegotoCommand},
 
+    {"setfont", &ONScripter::compatibilityFontCommand},
+    {"spfont", &ONScripter::compatibilityFontCommand},
     {"systemcall",		&ONScripter::systemcallCommand},
     {"sub",				&ONScripter::subCommand},
     {"strsph",			&ONScripter::strspCommand},
@@ -113,6 +115,7 @@ static ONScripter::FuncLUT func_lut[] = {
     {"savedir",         &ONScripter::savedirCommand},
     {"sar",				&ONScripter::nsaCommand},
 
+    {"resetmenu", &ONScripter::compatibilityMenuCommand},
     {"rubyon",			&ONScripter::rubyonCommand},
     {"rubyoff",			&ONScripter::rubyoffCommand},
     {"roff",			&ONScripter::roffCommand},
@@ -143,6 +146,7 @@ static ONScripter::FuncLUT func_lut[] = {
     {"ofscpy",			&ONScripter::ofscopyCommand},
     {"ofscopy",			&ONScripter::ofscopyCommand},
 
+    {"noteraseman", &ONScripter::compatibilityCommand},
     {"numalias",		&ONScripter::numaliasCommand},
     {"nsadir",			&ONScripter::nsadirCommand},
     {"nsa",				&ONScripter::nsaCommand},
@@ -154,6 +158,7 @@ static ONScripter::FuncLUT func_lut[] = {
     {"nega",			&ONScripter::negaCommand},
     {"nextcsel",		&ONScripter::nextcselCommand},
 
+    {"mousecursor", &ONScripter::compatibilityCommand},
     {"mul",				&ONScripter::mulCommand},
     {"msp2",			&ONScripter::mspCommand},
     {"msp",				&ONScripter::mspCommand},
@@ -193,6 +198,7 @@ static ONScripter::FuncLUT func_lut[] = {
     {"menuselectcolor",	&ONScripter::menuselectcolorCommand},
     {"maxkaisoupage",	&ONScripter::maxkaisoupageCommand},
 
+    {"lookbackvoice", &ONScripter::compatibilityCommand},
     {"luasub",			&ONScripter::luasubCommand},
     {"luacall",			&ONScripter::luacallCommand},
     {"lsph2sub",		&ONScripter::lsp2Command},
@@ -223,6 +229,7 @@ static ONScripter::FuncLUT func_lut[] = {
     {"layermessage",	&ONScripter::layermessageCommand},
     {"labellog",		&ONScripter::labellogCommand},
 
+    {"killmenu", &ONScripter::compatibilityMenuCommand},
     {"kinsoku",			&ONScripter::kinsokuCommand},
 
     {"jumpf",			&ONScripter::jumpfCommand},
@@ -231,6 +238,7 @@ static ONScripter::FuncLUT func_lut[] = {
     {"kidokuskip",		&ONScripter::kidokuskipCommand},
     {"kidokumode",		&ONScripter::kidokumodeCommand},
 
+    {"insertmenu", &ONScripter::compatibilityMenuCommand},
     {"itoa2",			&ONScripter::itoaCommand},
     {"itoa",			&ONScripter::itoaCommand},
     {"isskip",			&ONScripter::isskipCommand},
@@ -243,6 +251,7 @@ static ONScripter::FuncLUT func_lut[] = {
     {"inc",				&ONScripter::incCommand},
     {"if",				&ONScripter::ifCommand},
 
+    {"humanpos", &ONScripter::compatibilityCommand},
     {"humanz",			&ONScripter::humanzCommand},
     {"humanorder",		&ONScripter::humanorderCommand},
 
@@ -287,11 +296,13 @@ static ONScripter::FuncLUT func_lut[] = {
     {"getbgmvol",		&ONScripter::getmp3volCommand},
     {"game",			&ONScripter::gameCommand},
 
+    {"font", &ONScripter::compatibilityFontCommand},
     {"for",				&ONScripter::forCommand},
     {"filelog",			&ONScripter::filelogCommand},
     {"fileexist",		&ONScripter::fileexistCommand},
     {"flushout",		&ONScripter::flushoutCommand},
 
+    {"errorsave", &ONScripter::compatibilityCommand},
     {"existspbtn",		&ONScripter::spbtnCommand},
     {"exec_dll",		&ONScripter::exec_dllCommand},
     {"exbtn_d",			&ONScripter::exbtnCommand},
@@ -304,6 +315,10 @@ static ONScripter::FuncLUT func_lut[] = {
     {"effectskip",		&ONScripter::effectskipCommand},
     {"effect",			&ONScripter::effectCommand},
 
+    {"dsound", &ONScripter::compatibilityCommand},
+    {"deletemenu", &ONScripter::compatibilityMenuCommand},
+    {"defbgmvol", &ONScripter::defmp3volCommand},
+    {"defvoicecol", &ONScripter::defvoicevolCommand},
     {"dwavestop",		&ONScripter::dwavestopCommand},
     {"dwaveplayloop",	&ONScripter::dwaveCommand},
     {"dwaveplay",		&ONScripter::dwaveCommand},
@@ -333,6 +348,8 @@ static ONScripter::FuncLUT func_lut[] = {
     {"dec",				&ONScripter::decCommand},
     {"date",			&ONScripter::dateCommand},
 
+    {"checksp", &ONScripter::compatibilityCommand},
+    {"cdfadeout", &ONScripter::compatibilityCommand},
     {"csp2",			&ONScripter::cspCommand},
     {"csp",				&ONScripter::cspCommand},
     {"cselgoto",		&ONScripter::cselgotoCommand},
@@ -352,6 +369,8 @@ static ONScripter::FuncLUT func_lut[] = {
     {"cell",			&ONScripter::cellCommand},
     {"caption",			&ONScripter::captionCommand},
 
+    {"btnnowindowerase", &ONScripter::compatibilityCommand},
+    {"bgmdownmode", &ONScripter::compatibilityCommand},
     {"btrans",			&ONScripter::transbtnCommand},
     {"btnwait2",		&ONScripter::btnwaitCommand},
     {"btnwait",			&ONScripter::btnwaitCommand},

@@ -32,6 +32,7 @@
 #include <SDL2/SDL.h>
 #endif
 #include "BaseReader.h"
+#include <string>
 
 typedef unsigned char uchar3[3];
 
@@ -44,6 +45,7 @@ public:
     static void *font_cache;
     static int font_cache_size;
     void *ttf_font[2]; // 0...normal rendering, 1...outline rendering
+    std::string font_path;
     uchar3 color;
     uchar3 on_color, off_color, nofile_color;
     int font_size_xy[2];

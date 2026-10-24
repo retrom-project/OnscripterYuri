@@ -948,6 +948,7 @@ void ScriptHandler::addStrAlias( const char *str1, const char *str2 )
 
 void ScriptHandler::errorAndExit( const char *str )
 {
+    if (error_callback) error_callback(error_context);
     utils::printError( " **** Script error, %s [%s] ***\n", str, string_buffer);
     exit(-1);
 }
