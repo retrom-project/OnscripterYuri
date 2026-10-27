@@ -263,7 +263,11 @@ void ONScripter::flushEventSub( SDL_Event &event )
             wave_sample[event.user.code] = NULL;
             if (event.user.code == MIX_LOOPBGM_CHANNEL0 && 
                 loop_bgm_name[1] &&
-                wave_sample[MIX_LOOPBGM_CHANNEL1])
+                wave_sample[MIX_LOOPBGM_CHANNEL1]
+#if defined(WEB)
+                && !Mix_Playing(MIX_LOOPBGM_CHANNEL1)
+#endif
+                )
                 Mix_PlayChannel(MIX_LOOPBGM_CHANNEL1, 
                                 wave_sample[MIX_LOOPBGM_CHANNEL1], -1);
         }

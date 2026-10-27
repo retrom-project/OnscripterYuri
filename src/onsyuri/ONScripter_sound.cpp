@@ -106,8 +106,14 @@ int ONScripter::playSound(const char *filename, int format, bool loop_flag, int 
         if (music_info == NULL) {
             utils::printError("can't load music \"%s\": %s\n", filename, Mix_GetError());
         }
+#if defined(WEB)
+        Mix_HookMusicFinished(musicFinishCallback);
+#endif
         applyMusicVolume();
         if ( music_info && Mix_PlayMusic( music_info, (music_play_loop_flag&&music_loopback_offset==0.0)?-1:0 ) == 0 ){
+#if defined(WEB)
+            ons_web_music_loop(loop_flag, music_loopback_offset);
+#endif
             music_buffer = buffer;
             music_buffer_length = length;
             return SOUND_MUSIC;
@@ -195,6 +201,10 @@ int ONScripter::playWave(Mix_Chunk *chunk, int format, bool loop_flag, int chann
     if ( wave_sample[channel] ) Mix_FreeChunk( wave_sample[channel] );
     wave_sample[channel] = chunk;
     if (channel == 0 || channel == MIX_BGM_CHANNEL) applyMusicVolume();
+#if defined(WEB)
+    if (channel == MIX_LOOPBGM_CHANNEL0 && !(format & SOUND_PRELOAD) && wave_sample[MIX_LOOPBGM_CHANNEL1])
+        ons_web_chain(MIX_LOOPBGM_CHANNEL0, MIX_LOOPBGM_CHANNEL1, wave_sample[MIX_LOOPBGM_CHANNEL1]);
+#endif
 
     return 0;
 }

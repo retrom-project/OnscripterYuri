@@ -393,7 +393,9 @@ function(config_web TARGET_NAME)
     set(EMCC_FLAGS "${EMCC_FLAGS} -sUSE_SDL_IMAGE=2 -sSDL2_IMAGE_FORMATS=bmp,png,jpg")
     set(EMCC_FLAGS "${EMCC_FLAGS} -sUSE_SDL_MIXER=2 -sSDL2_MIXER_FORMATS=ogg,mp3,mid -sUSE_OGG=1 -sUSE_VORBIS=1 -sUSE_MPG123=1")
     set(EMCC_FLAGS "${EMCC_FLAGS} -sFORCE_FILESYSTEM -lidbfs.js --use-preload-plugins")
+    set(EMCC_FLAGS "${EMCC_FLAGS} --pre-js ${PROJECT_SOURCE_DIR}/src/onsyuri_web/audio.js")
     set_target_properties(${TARGET_NAME} PROPERTIES LINK_FLAGS ${EMCC_FLAGS})
+    set_property(TARGET ${TARGET_NAME} APPEND PROPERTY LINK_DEPENDS ${PROJECT_SOURCE_DIR}/src/onsyuri_web/audio.js)
     target_compile_options(${TARGET_NAME} PRIVATE 
         -Wno-invalid-source-encoding
     )
@@ -506,6 +508,7 @@ set(ONSYURI_CODE
     src/onsyuri/ONScripter_lut.cpp
     src/onsyuri/onscripter_main.cpp
     src/onsyuri/ons_content_web.cpp
+    src/onsyuri/ons_audio_web.cpp
     src/onsyuri/ONScripter_rmenu.cpp
     src/onsyuri/ONScripter_sound.cpp
     src/onsyuri/ONScripter_text.cpp

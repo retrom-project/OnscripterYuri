@@ -109,6 +109,101 @@ const wav = (hz, seconds) => {
         b.writeInt16LE(Math.round(Math.sin(i * 2 * Math.PI * hz / 44100) * 6000), 44 + i * 2);
     return b;
 };
+// A non-repeating, stereo signal distinguishes stale output from intentional
+// looping music. Keep it long enough to outlast startup and injected long tasks.
+const audioProbe = () => {
+    const n = 44100 * 20, b = Buffer.alloc(44 + n * 4);
+    b.write('RIFF'); b.writeUInt32LE(b.length - 8, 4); b.write('WAVEfmt ', 8);
+    b.writeUInt32LE(16, 16); b.writeUInt16LE(1, 20); b.writeUInt16LE(2, 22);
+    b.writeUInt32LE(44100, 24); b.writeUInt32LE(44100 * 4, 28);
+    b.writeUInt16LE(4, 32); b.writeUInt16LE(16, 34);
+    b.write('data', 36); b.writeUInt32LE(n * 4, 40);
+    let seed = 123456789;
+    for (let i = 0; i < n; i++) {
+        seed ^= seed << 13; seed ^= seed >>> 17; seed ^= seed << 5;
+        const value = (seed & 8191) - 4096;
+        b.writeInt16LE(value, 44 + i * 4);
+        b.writeInt16LE(-value, 46 + i * 4);
+    }
+    return b;
+};
+cases.set('audio-underrun', { script: define + `game\n*start\nbg #000000,1\nbgm "probe.wav"\n*wait\nclick\ngoto *wait\n`, async verify(page, caseId) {
+        const result = await page.evaluate(async () => {
+            const ac = window.actualAudioContext;
+            const url = URL.createObjectURL(new Blob([`class Capture extends AudioWorkletProcessor {
+                constructor() { super(); this.samples = new Float32Array(4096); this.position = 0;
+                    this.port.onmessage = () => { this.port.postMessage(Array.from(this.samples.subarray(0, this.position))); this.position = 0; }; }
+                process(inputs, outputs) {
+                    const channels = inputs[0];
+                    for (let c = 0; c < outputs[0].length; c++) outputs[0][c].set(channels[c] || new Float32Array(128));
+                    for (let i = 0; i < outputs[0][0].length; i++) {
+                        this.samples[this.position++] = outputs[0][0][i];
+                        if (this.position === this.samples.length) {
+                            this.port.postMessage(Array.from(this.samples)); this.position = 0;
+                        }
+                    }
+                    return true;
+                }
+            } registerProcessor('capture', Capture);`], {type: 'text/javascript'}));
+            await ac.audioWorklet.addModule(url); URL.revokeObjectURL(url);
+            const capture = new AudioWorkletNode(ac, 'capture', {outputChannelCount: [2]});
+            const samples = []; capture.port.onmessage = e => samples.push(...e.data);
+            // Observe only nodes that still feed the real destination. In the
+            // fixed core SDL's ScriptProcessor is a muted producer clock.
+            let outputs = 0;
+            for (const node of window.actualAudioOutputs) {
+                try { node.disconnect(ac.destination); } catch { continue; }
+                node.connect(capture); outputs++;
+            }
+            if (!outputs) throw Error('No actual audio output connected');
+            capture.connect(ac.destination);
+            const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+            await wait(400);
+            for (let i = 0; i < 3; i++) {
+                document.querySelector('canvas').click();
+                const end = performance.now() + 350;
+                while (performance.now() < end) {}
+                await wait(160);
+            }
+            await wait(400);
+            const rendered = samples.slice();
+            window.native._onsyuri_host_set_paused(1);
+            await wait(700);
+            const paused = samples.slice(-8192);
+            window.native._onsyuri_host_set_paused(0);
+            await wait(600);
+            const resumed = samples.slice(-8192);
+            try { window.native._onsyuri_host_stop(); } catch (e) { if (e.name !== 'ExitStatus') throw e; }
+            await wait(500);
+            const stopped = samples.slice(-8192);
+            capture.disconnect();
+            return {rendered, paused, resumed, stopped, sampleRate: ac.sampleRate};
+        });
+        let audible = 0, replayed = 0, silent = 0, gap = 0, longestGap = 0;
+        const firstAudible = result.rendered.findIndex(x => Math.abs(x) > .001);
+        for (let i = firstAudible; i < result.rendered.length; i++) {
+            gap = Math.abs(result.rendered[i]) < .00001 ? gap + 1 : 0;
+            longestGap = Math.max(longestGap, gap);
+        }
+        for (let i = 8192; i + 512 < result.rendered.length; i += 128) {
+            const block = result.rendered.slice(i, i + 512);
+            if (block.every(x => Math.abs(x) < .00001)) { silent++; continue; }
+            audible++;
+            if (block.every((x, j) => x === result.rendered[i - 8192 + j])) replayed++;
+        }
+        const observation = {frames: result.rendered.length, audible, replayed, silent, sampleRate: result.sampleRate,
+            longestGapMs: longestGap * 1000 / result.sampleRate};
+        await fs.writeFile(path.join(output, caseId + '.json'), JSON.stringify(observation, null, 2));
+        assert(audible > 100, 'empty or silent audio cannot establish an echo fix');
+        assert.equal(replayed, 0, 'main-thread stalls replayed consumed audio');
+        assert(observation.longestGapMs < 20, 'main-thread stalls interrupted continuous audio');
+        assert(result.paused.every(x => x === 0), 'pause retained audible queued data');
+        assert(result.resumed.some(x => Math.abs(x) > .001), 'audio did not resume');
+        assert(result.stopped.every(x => x === 0), 'exit retained audible queued data');
+        return observation;
+    } });
+cases.set('audio-loop-handoff', {script: define + `game\n*start\nbg #000000,1\nloopbgm "intro.wav","probe.wav"\n*wait\nclick\ngoto *wait\n`,
+    verify: cases.get('audio-underrun').verify});
 cases.set('sprite-font', { script: define + `game\n*start\nbg #000000,1\n` + windowScript + `spfont "serif.ttf",28,28,0,0,0,0\nlsp 10,":s#ffffffMMMM",20,20\nspfont clear\nlsp 11,":s/28,28,0;#ffffffMMMM",20,80\nprint 1\nclick\ngoto *start\n`, async verify(page) {
         const serif = await region(page, 20, 20, 180, 38), sans = await region(page, 20, 80, 180, 38);
         assert(serif.some(n => n > 128) && sans.some(n => n > 128), 'missing text sprites');
@@ -259,15 +354,19 @@ cases.set('lookback-voice', { script: define + `lookbackvoice "flip.wav"\ngame\n
         assert(!(await page.evaluate(() => window.reads)).some(r => /wav.*voice/.test(r.name)), 'lookback replayed story voice');
     } });
 // The CD fixture must outlast startup and its 1.2-second fade; natural track end is not a fade failure.
-const common = new Map([["default.ttf", await fs.readFile(sans)], ["serif.ttf", await fs.readFile(serif)], ["human.bmp", bmp(20, 100, [0, 255, 0])], ["cursor.cur", cur([0, 255, 0])], ["cursor.ani", ani()], ["legacy.ani", ani(true)], ["music.wav", wav(700, 1)], ["cd/track01.wav", wav(700, 5)], ["voice.wav", wav(1100, 2)], ["flip.wav", wav(1700, .6)]]);
+const common = new Map([["default.ttf", await fs.readFile(sans)], ["serif.ttf", await fs.readFile(serif)], ["human.bmp", bmp(20, 100, [0, 255, 0])], ["cursor.cur", cur([0, 255, 0])], ["cursor.ani", ani()], ["legacy.ani", ani(true)], ["music.wav", wav(700, 1)], ["cd/track01.wav", wav(700, 5)], ["voice.wav", wav(1100, 2)], ["flip.wav", wav(1700, .6)], ['probe.wav', audioProbe()], ['intro.wav', wav(700, 1.45)]]);
 const coreFiles = new Map(await Promise.all(["onsyuri.js", "onsyuri.wasm"].map(async (name) => [name, await fs.readFile(path.join(assets, name))])));
 const selected = process.env.ONS_CASES?.split(",");
 const report = { inputs: { core: [...coreFiles].map(([name, bytes]) => ({ name, sha256: sha(bytes), sizeBytes: bytes.length })), resources: [...common].map(([name, bytes]) => ({ name, sha256: sha(bytes) })) }, cases: [] };
 const restorations = new Map();
 const html = id => `<!doctype html><meta charset="utf-8"><body style="margin:0;background:#000"><canvas id="canvas" tabindex="0"></canvas><script src="/onsyuri.js"></script><script>
 window.flush_save=()=>{};window.scale_full=()=>{};window.playVideo=()=>{};
-const ac=window.AudioContext||window.webkitAudioContext, originalProcessor=ac.prototype.createScriptProcessor;
-ac.prototype.createScriptProcessor=function(...args){const node=originalProcessor.apply(this,args),analyser=this.createAnalyser();analyser.fftSize=8192;analyser.smoothingTimeConstant=0;node.connect(analyser);window.audioAnalyser=analyser;window.audioSampleRate=this.sampleRate;return node};
+const originalConnect=AudioNode.prototype.connect;window.actualAudioOutputs=new Set();
+AudioNode.prototype.connect=function(target,...args){if(target===this.context.destination){
+    window.actualAudioOutputs.add(this);window.actualAudioContext=this.context;
+    if(!window.audioAnalyser){window.audioAnalyser=this.context.createAnalyser();window.audioAnalyser.fftSize=8192;window.audioAnalyser.smoothingTimeConstant=0;window.audioSampleRate=this.context.sampleRate;}
+    originalConnect.call(this,window.audioAnalyser);
+}return originalConnect.call(this,target,...args)};
 (async()=>{
 const names=await(await fetch('/files/${id}')).json();const files=new Map(await Promise.all(names.map(async name=>['/game/'+name,{name,bytes:new Uint8Array(await(await fetch('/source/${id}/'+name)).arrayBuffer())}])));
 const handles=new Map();let next=1;window.reads=[];
@@ -358,7 +457,7 @@ try {
             await page.waitForFunction(() => window.failure || window.native?._onsyuri_host_is_ready() === 1, null, { timeout: 30000 });
             assert.equal(await page.evaluate(() => window.failure ?? null), null);
             await page.waitForTimeout(300);
-            const observations = await entry.verify(page);
+            const observations = await entry.verify(page, id);
             if (observations) result.observations = observations;
             assert.deepEqual(result.errors, []);
             if (!entry.allowDiagnostics)

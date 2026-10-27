@@ -1148,6 +1148,7 @@ int ONScripter::resetCommand()
     mp3fadeout_duration = 0; //don't use fadeout during a reset
     resetSub();
     mp3fadeout_duration = fadeout;
+    resetAudioOutput();
 
     start_page = current_page = &page_list[0];
     clearCurrentPage();
