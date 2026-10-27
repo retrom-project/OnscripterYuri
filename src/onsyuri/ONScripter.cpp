@@ -54,6 +54,14 @@ static void SDL_Quit_Wrapper()
 
 #ifdef WEB
 #include <emscripten.h>
+EM_ASYNC_JS(void, ons_audio_open, (int channels), {
+    try {
+        const sdl = Module['SDL2'];
+        await Module['onsAudio']['open'](sdl.audioContext, sdl.audio.scriptProcessorNode, channels);
+    } catch (error) {
+        abort('ONS_AUDIO_INIT_FAILED: ' + error);
+    }
+});
 #endif
 
 inline void alignAspectRatio(const int &sw, const int &sh, int &dw, int &dh) {
@@ -327,6 +335,9 @@ void ONScripter::initSDL()
 
 void ONScripter::openAudio(int freq)
 {
+#ifdef WEB
+    EM_ASM({ Module['onsAudio']['close'](); });
+#endif
     Mix_CloseAudio();
 
     if ( Mix_OpenAudio( (freq<0)?44100:freq, MIX_DEFAULT_FORMAT, MIX_DEFAULT_CHANNELS, DEFAULT_AUDIOBUF ) < 0 ){      
@@ -347,11 +358,29 @@ void ONScripter::openAudio(int freq)
         audio_format.freq = freq;
         audio_format.channels = channels;
 
+#ifdef WEB
+        ons_audio_open(channels);
+#endif
         audio_open_flag = true;
 
         Mix_AllocateChannels( ONS_MIX_CHANNELS+ONS_MIX_EXTRA_CHANNELS );
         Mix_ChannelFinished( waveCallback );
     }
+}
+
+void ONScripter::setHostPaused(bool paused)
+{
+    host_paused = paused;
+#ifdef WEB
+    EM_ASM({ Module['onsAudio']['setPaused']($0 != 0); }, paused);
+#endif
+}
+
+void ONScripter::resetAudioOutput()
+{
+#ifdef WEB
+    EM_ASM({ Module['onsAudio']['reset'](); });
+#endif
 }
 
 ONScripter::ONScripter()
@@ -1534,6 +1563,9 @@ int ONScripter::refreshMode()
 
 void ONScripter::quit()
 {
+#ifdef WEB
+    EM_ASM({ Module['onsAudio']['close'](); });
+#endif
     cleanupCompatibility();
     saveAll();
 

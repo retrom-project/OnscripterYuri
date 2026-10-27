@@ -42,6 +42,7 @@
 #include <SDL2/SDL_ttf.h>
 #include <SDL2/SDL_mixer.h>
 #endif
+#include "ons_audio_web.h"
 
 #if defined(USE_GLES)
 #include "renderer/gles_renderer.h"
@@ -125,7 +126,7 @@ public:
     int  saveGameForHost(int no);
     int  loadGameForHost(int no);
     bool isHostCheckpointReady() const;
-    void setHostPaused(bool paused) { host_paused = paused; }
+    void setHostPaused(bool paused);
     void setHostRestoreSlot(int slot) {
         host_restore_slot = slot;
         host_restore_status = slot >= 0 ? 1 : 0;
@@ -483,6 +484,7 @@ private:
     void initSDL();
     void calcRenderRect();
     void openAudio(int freq=-1);
+    void resetAudioOutput();
     void reset(); // called on definereset
     void resetSub(); // called on reset
     void resetSentenceFont();

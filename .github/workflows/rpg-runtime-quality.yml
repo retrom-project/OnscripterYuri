@@ -38,6 +38,8 @@ jobs:
         run: |
           npm install --prefix "$RUNNER_TEMP/ons-browser" --no-audit --no-fund playwright@1.61.1
           "$RUNNER_TEMP/ons-browser/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Verify independent audio playback and lifecycle
+        run: node --test .github/rpg-runtime/audio.test.mjs
       - name: Verify current wait checkpoints and native slots
         run: |
           browser=$(node -e "process.stdout.write(require(process.argv[1]).chromium.executablePath())" "$RUNNER_TEMP/ons-browser/node_modules/playwright")
